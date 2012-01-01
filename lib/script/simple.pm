@@ -41,11 +41,19 @@ are define directly in the script file and not in a module.
 
 use strict;
 use warnings;
+use constant GOT_SUB_NAME => eval 'use Sub::Name; 1' ? 1 : 0;
 use Getopt::Long ();
 use Cwd ();
 
 our $VERSION = '0.01';
 my $ANON = 1;
+
+sub __new_sub {
+    my($fqn, $code) = @_;
+    no strict 'refs';
+    if(GOT_SUB_NAME) { *$fqn = Sub::Name::subname($fqn, $code) }
+    else { *$fqn = $code }
+}
 
 =head1 EXPORTED FUNCTIONS
 
@@ -110,13 +118,11 @@ sub option {
     my $self = shift;
     my $type = shift or die 'Usage: option $type => ...';
     my $name = shift or die 'Usage: option $type => $name => ...';
-    my($documentation, $default, @args);
+    my $documentation = shift or die 'Usage: option $type => $name => $documentation, ...';
+    my($default, @args);
 
-    if(@_ <= 2) {
-        ($documentation, $default) = @_;
-    }
-    elsif(@_ % 2) {
-        $documentation = shift;
+    if(@_ % 2) {
+        $default = shift;
         @args = @_;
     }
     else {
@@ -153,28 +159,23 @@ application object in list/scalar context (from L<perlfunc/do>).
 
 sub app {
     my($self, $code) = @_;
-    my $parser = $self->_getopt_parser;
+    my $parser = $self->_option_parser;
     my $app = {};
-    my @options_spec;
+    my(@options_spec, $application_class);
 
     for my $option (@{ $self->{'options'} }) {
         push @options_spec, $self->_calculate_option_spec($option);
         $app->{$option->{'name'}} = $option->{'default'}; # set defaults on application object
     }
 
-    # add default options
-    # TODO: --man and --version
-    push @options_spec, 'help';
-
-    $parser->getoptions($app, @options_spec);
-    $app->{'script'} = $self;
+    $parser->getoptions($app, @options_spec, $self->_default_options);
 
     if($app->{'help'}) {
-        $self->_print_help;
+        $self->print_help;
         $self->_exit('help');
     }
 
-    bless $app, $self->_generate_application_class($code);
+    $app = $self->_generate_application_class($code)->new($app);
 
     if(defined wantarray) { # $app = do $script_file;
         return $app;
@@ -199,6 +200,11 @@ sub _calculate_option_spec {
     return $spec;
 }
 
+sub _default_options {
+    # TODO Add --man and --version options
+    return 'help';
+}
+
 sub _generate_application_class {
     my($self, $code) = @_;
     my $application_class = join '::', ref($self), "__ANON__${ANON}__", Cwd::abs_path($self->{'caller'}[1]);
@@ -208,58 +214,23 @@ sub _generate_application_class {
     $application_class =~ s![^\w:]!_!g;
     $application_class =~ s!:::+!::!g;
 
-    eval qq[
-        package $application_class;
-        use strict;
-        use warnings;
-        1;
-    ] or die $@;
+    eval qq[package $application_class; 1] or die $@;
 
     {
         no strict 'refs';
-        *{ "$application_class\::run" } = $code;
-        *{ "$application_class\::script" } = sub { $_[0]->{'script'} };
+        __new_sub "$application_class\::new" => sub { my $class = shift; bless shift, $class };
+        __new_sub "$application_class\::script" => sub { $self };
+        __new_sub "$application_class\::run" => $code;
 
         for my $option (@{ $self->{'options'} }) {
             my $name = $option->{'name'};
             my $fqn = join '::', $application_class, $option->{'name'};
             $fqn =~ s!-!_!g;
-            *$fqn = sub { $_[0]->{$name} };
+            __new_sub $fqn => sub { $_[0]->{$name} };
         }
     }
 
     return $application_class;
-}
-
-sub _print_help {
-    my $self = shift;
-    my $width = length 'help';
-
-    for my $option (@{ $self->{'options'} }) {
-        my $length = length $option->{'name'};
-        $width = $length if($width < $length);
-    }
-
-    print "Usage:\n";
-
-    for my $option (@{ $self->{'options'} }) {
-        printf(" %s --%s  %s\n",
-            $option->{'required'} ? '*' : ' ',
-            $option->{'name'},
-            $option->{'documentation'},
-        );
-    }
-
-    printf "   --%s  %s\n", 'help', 'Print this help text';
-    print "\n";
-
-    return $self;
-}
-
-sub _exit {
-    my($self, $reason) = @_;
-    # TODO: Use $reason
-    exit 0;
 }
 
 =head1 ATTRIBUTES
@@ -281,7 +252,7 @@ L<perlfunc/caller>.
 
 sub caller { $_[0]->{'caller'} }
 sub options { $_[0]->{'options'} }
-sub _getopt_parser { Getopt::Long::Parser->new(config => [ qw( no_auto_help pass_through ) ]) }
+sub _option_parser { $_[0]->{'_option_parser'} ||= Getopt::Long::Parser->new(config => [ qw( no_auto_help no_auto_version pass_through ) ]) }
 
 =head1 METHODS
 
@@ -304,6 +275,51 @@ sub new {
     return $self;
 }
 
+=head2 print_help
+
+    $self->print_help;
+
+Will print L</options> to selected filehandle (STDOUT by default) in
+a normalized matter. Example:
+
+    Usage:
+       --foo   Foo does this and that
+     * --bar   Bar does something else
+       --help  Print this help text
+
+=cut
+
+sub print_help {
+    my $self = shift;
+    my $width = length 'help';
+
+    for my $option (@{ $self->{'options'} }) {
+        my $length = length $option->{'name'};
+        $width = $length if($width < $length);
+    }
+
+    print "Usage:\n";
+
+    for my $option (@{ $self->{'options'} }) {
+        printf(" %s --%-${width}s  %s\n",
+            $option->{'required'} ? '*' : ' ',
+            $option->{'name'},
+            $option->{'documentation'},
+        );
+    }
+
+    printf "   --%-${width}s  %s\n", 'help', 'Print this help text';
+    print "\n";
+
+    return $self;
+}
+
+sub _exit {
+    my($self, $reason) = @_;
+    # TODO: Use $reason
+    exit 0;
+}
+
 =head2 import
 
 Will export the functions listed under L</EXPORTED FUNCTIONS>. The functions
@@ -320,6 +336,7 @@ sub import {
     warnings->import;
 
     no strict 'refs';
+    no warnings 'redefine'; # need to allow redefine when loading a new app
     *{"$caller[0]\::app"} = sub (&) { $self->app(@_) };
     *{"$caller[0]\::option"} = sub { $self->option(@_) };
 }

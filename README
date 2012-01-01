@@ -109,6 +109,17 @@ METHODS
     Object constructor. Creates a new object representing the script meta
     information.
 
+  print_help
+        $self->print_help;
+
+    Will print "options" to selected filehandle (STDOUT by default) in a
+    normalized matter. Example:
+
+        Usage:
+           --foo   Foo does this and that
+         * --bar   Bar does something else
+           --help  Print this help text
+
   import
     Will export the functions listed under "EXPORTED FUNCTIONS". The
     functions will act on a script::simple object created by this method.
