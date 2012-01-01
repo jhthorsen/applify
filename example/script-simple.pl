@@ -4,7 +4,7 @@ use script::simple;
 
 option file => input_file => 'File to read from', 'Makefile.PL';
 option dir => output_dir => 'Directory to write files to', '.';
-option flag => dry_run => 'Use --no-dry-run to actually do something', 1;
+option flag => dry_run => 'Use --no-dry-run to actually do something', required => 1;
 
 app {
     my($self, @extra) = @_;

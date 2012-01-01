@@ -119,7 +119,7 @@ Used as description text when printing the usage text.
 
 =item * C<required>
 
-TODO
+The script will not start if a required field is omitted.
 
 =item * Other
 
@@ -177,8 +177,8 @@ application object in list/scalar context (from L<perlfunc/do>).
 
 sub app {
     my($self, $code) = @_;
-    my $parser = $self->_option_parser;
     my $app = {};
+    my $parser = $self->_option_parser;
     my(@options_spec, $application_class);
 
     for my $option (@{ $self->{'options'} }) {
@@ -195,12 +195,8 @@ sub app {
 
     $app = $self->_generate_application_class($code)->new($app);
 
-    if(defined wantarray) { # $app = do $script_file;
-        return $app;
-    }
-    else { # perl $script_file;
-        $app->run(@ARGV); # TODO: Handle exceptions
-    }
+    return $app if(defined wantarray); # $app = do $script_file;
+    $self->_exit($app->run(@ARGV));
 }
 
 sub _calculate_option_spec {
@@ -227,6 +223,7 @@ sub _default_options {
 sub _generate_application_class {
     my($self, $code) = @_;
     my $application_class = join '::', ref($self), "__ANON__${ANON}__", Cwd::abs_path($self->{'caller'}[1]);
+    my @required;
 
     $ANON++;
     $application_class =~ s![\/]!::!g;
@@ -239,13 +236,24 @@ sub _generate_application_class {
         no strict 'refs';
         __new_sub "$application_class\::new" => sub { my $class = shift; bless shift, $class };
         __new_sub "$application_class\::script" => sub { $self };
-        __new_sub "$application_class\::run" => $code;
+        __new_sub "$application_class\::run" => sub {
+            my($app, @extra) = @_;
+
+            if(@required = grep { not defined $app->{$_} } @required) {
+                my $required = join ', ', map { "--$_" } @required;
+                $app->script->print_help;
+                die "Required attribute missing: $required\n";
+            }
+
+            return $app->$code(@extra);
+        };
 
         for my $option (@{ $self->{'options'} }) {
             my $name = $option->{'name'};
             my $fqn = join '::', $application_class, $option->{'name'};
             $fqn =~ s!-!_!g;
             __new_sub $fqn => sub { $_[0]->{$name} };
+            push @required, $name if($option->{'required'});
         }
     }
 
@@ -335,8 +343,8 @@ sub print_help {
 
 sub _exit {
     my($self, $reason) = @_;
-    # TODO: Use $reason
-    exit 0;
+    exit 0 if($reason eq 'help');
+    exit $reason;
 }
 
 =head2 import

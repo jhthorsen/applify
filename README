@@ -79,7 +79,7 @@ EXPORTED FUNCTIONS
 
         *   "required"
 
-            TODO
+            The script will not start if a required field is omitted.
 
         *   Other
 

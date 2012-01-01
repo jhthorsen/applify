@@ -4,7 +4,7 @@ use lib qw(lib);
 use Test::More;
 use script::simple ();
 
-plan tests => 26;
+plan tests => 27;
 
 {
     my $app = eval q[use script::simple; app {}] or BAIL_OUT $@;
@@ -47,16 +47,12 @@ plan tests => 26;
 
     $script->option(str => foo_3 => 'foo_3 can also something', 123, required => 1);
     is($script->options->[2]{'default'}, 123, 'foo_3 has default value');
+    is($script->options->[2]{'required'}, 1, 'foo_3 is required');
 
-    {
-        local $TODO = 'need to implement required => 1';
-        is($script->options->[2]{'required'}, 1, 'foo_3 is required');
-    }
-
-    is($script->_calculate_option_spec({ name => 'a_b', type => 'foo' }), 'a_b=s', 'a_b=s');
     is($script->_calculate_option_spec({ name => 'a_b', type => 'bool' }), 'a_b!', 'a_b!');
     is($script->_calculate_option_spec({ name => 'a_b', type => 'flag' }), 'a_b!', 'a_b!');
     is($script->_calculate_option_spec({ name => 'a_b', type => 'inc' }), 'a_b+', 'a_b+');
+    is($script->_calculate_option_spec({ name => 'a_b', type => 'str' }), 'a_b=s', 'a_b=s');
     is($script->_calculate_option_spec({ name => 'a_b', type => 'int' }), 'a_b=i', 'a_b=i');
     is($script->_calculate_option_spec({ name => 'a_b', type => 'num' }), 'a_b=f', 'a_b=f');
 
@@ -90,8 +86,13 @@ Usage:
 
 {
     my $app = do 'example/script-simple.pl';
-    isa_ok($app->script, 'script::simple');
+    my $script = $app->script;
+
+    isa_ok($script, 'script::simple');
     can_ok($app, qw/ input_file output_dir dry_run /);
+
+    eval { $app->run };
+    is($@, "Required attribute missing: --dry-run\n", '--dry-run missing');
 }
 
 sub run_method {
