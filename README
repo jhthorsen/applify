@@ -1,0 +1,122 @@
+NAME
+    script::simple - Write object oriented scripts with ease
+
+VERSION
+    0.01
+
+DESCRIPTION
+    This module should keep all the noise away and let you write scripts
+    very easily. These scripts can even be unittested even though they are
+    define directly in the script file and not in a module.
+
+SYNOPSIS
+        #!/usr/bin/perl
+        use script::simple;
+
+        option file => input_file => 'File to read from';
+        option dir => output_dir => 'Directory to write files to';
+        option flag => dry_run => 'Use --no-dry-run to actually do something', 1;
+
+        app {
+            my($self, @extra) = @_;
+            my $exit_value = 0;
+
+            print "Will read from: ", $self->input_file, "\n";
+            print "Will write files to: ", $self->output_dir, "\n";
+
+            if($self->dry_run) {
+                die 'Will not run script';
+            }
+
+            return $exit_value;
+        };
+
+EXPORTED FUNCTIONS
+  option
+        option $type => $name => $documentation;
+        option $type => $name => $documentation, $default;
+        option $type => $name => $documentation, $default, @args;
+
+    This function is used to define options which can be given to this
+    application. See "SYNOPSIS" for example code. This function can also be
+    called as a method on $self.
+
+    *   $type
+
+        Used to define value types for this input. (TODO)
+
+    *   $name
+
+        The name of an application switch. This name will also be used as
+        accessor name inside the application. Example:
+
+            # define an application switch:
+            option file => some_file => '...';
+
+            # call the application from command line:
+            > myapp.pl --some-file /foo/bar
+
+            # run the application code:
+            app {
+                my $self = shift;
+                print $self->some_file # prints "/foo/bar"
+                return 0;
+            };
+
+    *   $documentation
+
+        Used as description text when printing the usage text.
+
+    *   @args
+
+        *   "required"
+
+            TODO
+
+        *   Other
+
+            Any other Moose attribute argument may/will be supported in
+            future release.
+
+  app
+        app CODE;
+
+    This function will define the code block which is called when the
+    application is started. See "SYNOPSIS" for example code. This function
+    can also be called as a method on $self.
+
+    IMPORTANT: This function must be the last function called in the script
+    file for unittests to work. Reason for this is that this function runs
+    the application in void context (started from command line), but returns
+    the application object in list/scalar context (from "do" in perlfunc).
+
+ATTRIBUTES
+  options
+        $array_ref = $self->options;
+
+    Holds the application options given to "option".
+
+  caller
+        $array_ref = $self->caller;
+
+    Holds information about the caller script file/namespace. See also
+    "caller" in perlfunc.
+
+METHODS
+  new
+        $self = $class->new({ caller => $array_ref, ... });
+
+    Object constructor. Creates a new object representing the script meta
+    information.
+
+  import
+    Will export the functions listed under "EXPORTED FUNCTIONS". The
+    functions will act on a script::simple object created by this method.
+
+COPYRIGHT & LICENSE
+    This library is free software. You can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
+AUTHOR
+    Jan Henning Thorsen
+
