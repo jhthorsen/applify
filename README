@@ -43,7 +43,15 @@ EXPORTED FUNCTIONS
 
     *   $type
 
-        Used to define value types for this input. (TODO)
+        Used to define value types for this input.
+
+        bool, flag
+        inc
+        str
+        int
+        num
+        file (TODO)
+        dir (TODO)
 
     *   $name
 

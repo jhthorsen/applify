@@ -71,7 +71,25 @@ called as a method on C<$self>.
 
 =item * $type
 
-Used to define value types for this input. (TODO)
+Used to define value types for this input.
+
+=over 4
+
+=item bool, flag
+
+=item inc
+
+=item str
+
+=item int
+
+=item num
+
+=item file (TODO)
+
+=item dir (TODO)
+
+=back
 
 =item * $name
 
@@ -191,11 +209,12 @@ sub _calculate_option_spec {
 
     if($option->{'type'} =~ /^(?:bool|flag)/i) { $spec .= '!' }
     elsif($option->{'type'} =~ /^inc/) { $spec .= '+' }
+    elsif($option->{'type'} =~ /^str/) { $spec .= '=s' }
     elsif($option->{'type'} =~ /^int/i) { $spec .= '=i' }
     elsif($option->{'type'} =~ /^num/i) { $spec .= '=f' }
     elsif($option->{'type'} =~ /^file/) { $spec .= '=s' } # TODO
     elsif($option->{'type'} =~ /^dir/) { $spec .= '=s' } # TODO
-    else { $spec .= '=s' }
+    else { die 'Usage: option {bool|flag|inc|str|int|num|file|dir} ...' }
 
     return $spec;
 }
