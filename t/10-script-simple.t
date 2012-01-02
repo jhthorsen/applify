@@ -121,7 +121,7 @@ Usage:
     my $script = $app->script;
 
     isa_ok($script, 'script::simple');
-    can_ok($app, qw/ input_file output_dir dry_run /);
+    can_ok($app, qw/ input_file output_dir dry_run generate_exit_value /);
 
     eval { run_method($app, 'run') };
     is($@, "Required attribute missing: --dry-run\n", '--dry-run missing');

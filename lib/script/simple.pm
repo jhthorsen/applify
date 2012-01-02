@@ -23,6 +23,10 @@ are define directly in the script file and not in a module.
     option dir => output_dir => 'Directory to write files to';
     option flag => dry_run => 'Use --no-dry-run to actually do something', 1;
 
+    method generate_exit_value => sub {
+        return int rand 100;
+    };
+
     app {
         my($self, @extra) = @_;
         my $exit_value = 0;
@@ -34,7 +38,7 @@ are define directly in the script file and not in a module.
             die 'Will not run script';
         }
 
-        return $exit_value;
+        return $self->generate_exit_value;
     };
 
 =cut
@@ -159,7 +163,7 @@ sub option {
         name => $name,
         documentation => $documentation,
     };
-    
+
     return $self;
 }
 
@@ -178,6 +182,25 @@ sub documentation {
     return $_[0]->{'documentation'} if(@_ == 1);
     $_[0]->{'documentation'} = $_[1] or die 'Usage: documentation $file|$module_name;';
     return $_[0];
+}
+
+=head2 method
+
+    method $method_name => CODE;
+
+Used to define methods which should be available on the
+application object.
+
+=cut
+
+sub method {
+    my $self = shift;
+    my $name = shift or die 'Usage: method $name => ...';
+    my $code = shift or die 'Usage: method $name => CODE';
+
+    $self->{'methods'}{$name} = $code;
+
+    return $self;
 }
 
 =head2 version
@@ -305,6 +328,11 @@ sub _generate_application_class {
             __new_sub $fqn => sub { $_[0]->{$name} };
             push @required, $name if($option->{'required'});
         }
+
+        for my $name (keys %{ $self->{'methods'} }) {
+            my $fqn = join '::', $application_class, $name;
+            __new_sub $fqn => $self->{'methods'}{$name};
+        }
     }
 
     return $application_class;
@@ -347,6 +375,7 @@ sub new {
     my $self = bless $args, $class;
 
     $self->{'options'} ||= [];
+    $self->{'methods'} ||= {};
     $self->{'caller'} or die 'Usage: $self->new({ caller => [...], ... })';
 
     return $self;
@@ -451,6 +480,7 @@ sub import {
     *{"$caller[0]\::option"} = sub { $self->option(@_) };
     *{"$caller[0]\::version"} = sub { $self->version(@_) };
     *{"$caller[0]\::documentation"} = sub { $self->documentation(@_) };
+    *{"$caller[0]\::method"} = sub { $self->method(@_) };
 }
 
 =head1 COPYRIGHT & LICENSE

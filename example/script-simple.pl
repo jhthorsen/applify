@@ -9,6 +9,10 @@ option flag => dry_run => 'Use --no-dry-run to actually do something', required 
 version 1.23;
 documentation __FILE__;
 
+method generate_exit_value => sub {
+    return int rand 100;
+};
+
 app {
     my($self, @extra) = @_;
     my $exit_value = 0;
@@ -20,7 +24,7 @@ app {
         die 'Will not run script';
     }
 
-    return $exit_value;
+    return $self->generate_exit_value;
 };
 
 =head1 NAME
