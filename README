@@ -17,6 +17,9 @@ SYNOPSIS
         option dir => output_dir => 'Directory to write files to';
         option flag => dry_run => 'Use --no-dry-run to actually do something', 1;
 
+        documentation __FILE__;
+        version 1.23;
+
         method generate_exit_value => sub {
             return int rand 100;
         };
@@ -34,6 +37,37 @@ SYNOPSIS
 
             return $self->generate_exit_value;
         };
+
+APPLICATION CLASS
+    This module will generate an application class, which $self inside the
+    "app" block refere to. This class will have:
+
+    *   new()
+
+        An object constructor. This method will not be auto generated if any
+        of the classes given to "extends" has the method "new()".
+
+    *   run()
+
+        This method is basically the code block given to "app".
+
+    *   Other methods
+
+        Other methods available must either be defined with the "method"
+        keyword or be available through inheritance.
+
+    *   _script()
+
+        This is an accessor which return the Applify object which is refered
+        to as $self in this documentation.
+
+        NOTE: This accessor starts with an underscore to prevent conflicts
+        with "options".
+
+    *   Other accessors
+
+        Any "option" (application switch) will be available as an accessor
+        on the application object.
 
 EXPORTED FUNCTIONS
   option
@@ -99,6 +133,13 @@ EXPORTED FUNCTIONS
     Specifies where to retrieve documentaion from when giving the "--man"
     switch to your script.
 
+  version
+        version 'Some::Module';
+        version $num;
+
+    Specifies where to retrieve the version number from when giving the
+    "--version" switch to your script.
+
   method
         method $method_name => CODE;
 
@@ -106,17 +147,10 @@ EXPORTED FUNCTIONS
     object.
 
   extends
-        extends @modules;
+        extends @classes;
 
-    Specify which modules this application should inherit from. These
-    objects can be Moose based.
-
-  version
-        version 'Some::Module';
-        version $num;
-
-    Specifies where to retrieve the version number from when giving the
-    "--version" switch to your script.
+    Specify which classes this application should inherit from. These
+    classes can be Moose based.
 
   app
         app CODE;

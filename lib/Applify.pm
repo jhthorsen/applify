@@ -23,6 +23,9 @@ are define directly in the script file and not in a module.
     option dir => output_dir => 'Directory to write files to';
     option flag => dry_run => 'Use --no-dry-run to actually do something', 1;
 
+    documentation __FILE__;
+    version 1.23;
+
     method generate_exit_value => sub {
         return int rand 100;
     };
@@ -40,6 +43,42 @@ are define directly in the script file and not in a module.
 
         return $self->generate_exit_value;
     };
+
+=head1 APPLICATION CLASS
+
+This module will generate an application class, which C<$self> inside the
+L</app> block refere to. This class will have:
+
+=over 4
+
+=item * new()
+
+An object constructor. This method will not be auto generated if any of
+the classes given to L</extends> has the method C<new()>.
+
+=item * run()
+
+This method is basically the code block given to L</app>.
+
+=item * Other methods
+
+Other methods available must either be defined with the L</method>
+keyword or be available through inheritance.
+
+=item * _script()
+
+This is an accessor which return the L<Applify> object which
+is refered to as C<$self> in this documentation.
+
+NOTE: This accessor starts with an underscore to prevent conflicts
+with L</options>.
+
+=item * Other accessors
+
+Any L</option> (application switch) will be available as an accessor on the
+application object.
+
+=back
 
 =cut
 
@@ -182,6 +221,22 @@ sub documentation {
     return $_[0];
 }
 
+=head2 version
+
+    version 'Some::Module';
+    version $num;
+
+Specifies where to retrieve the version number from when giving the
+C<--version> switch to your script.
+
+=cut
+
+sub version {
+    return $_[0]->{'version'} if(@_ == 1);
+    $_[0]->{'version'} = $_[1] or die 'Usage: version $module_name|$num;';
+    return $_[0];
+}
+
 =head2 method
 
     method $method_name => CODE;
@@ -203,10 +258,10 @@ sub method {
 
 =head2 extends
 
-    extends @modules;
+    extends @classes;
 
-Specify which modules this application should inherit from. These
-objects can be L<Moose> based.
+Specify which classes this application should inherit from. These
+classes can be L<Moose> based.
 
 =cut
 
@@ -214,22 +269,6 @@ sub extends {
     my $self = shift;
     $self->{'extends'} = [@_];
     return $self;
-}
-
-=head2 version
-
-    version 'Some::Module';
-    version $num;
-
-Specifies where to retrieve the version number from when giving the
-C<--version> switch to your script.
-
-=cut
-
-sub version {
-    return $_[0]->{'version'} if(@_ == 1);
-    $_[0]->{'version'} = $_[1] or die 'Usage: version $module_name|$num;';
-    return $_[0];
 }
 
 =head2 app
@@ -331,13 +370,13 @@ sub _generate_application_class {
         no strict 'refs';
 
         __new_sub "$application_class\::new" => sub { my $class = shift; bless shift, $class } unless(grep { $_->can('new') } @$extends);
-        __new_sub "$application_class\::script" => sub { $self };
+        __new_sub "$application_class\::_script" => sub { $self };
         __new_sub "$application_class\::run" => sub {
             my($app, @extra) = @_;
 
             if(@required = grep { not defined $app->{$_} } @required) {
                 my $required = join ', ', map { '--' .$self->_attr_to_option($_) } @required;
-                $app->script->print_help;
+                $app->_script->print_help;
                 die "Required attribute missing: $required\n";
             }
 
@@ -368,16 +407,8 @@ sub _generate_application_class {
 
 Holds the application options given to L</option>.
 
-=head2 caller
-
-    $array_ref = $self->caller;
-
-Holds information about the caller script file/namespace. See also
-L<perlfunc/caller>.
-
 =cut
 
-sub caller { $_[0]->{'caller'} }
 sub options { $_[0]->{'options'} }
 sub _option_parser { $_[0]->{'_option_parser'} ||= Getopt::Long::Parser->new(config => [ qw( no_auto_help no_auto_version pass_through ) ]) }
 
@@ -385,7 +416,7 @@ sub _option_parser { $_[0]->{'_option_parser'} ||= Getopt::Long::Parser->new(con
 
 =head2 new
 
-    $self = $class->new({ caller => $array_ref, ... });
+    $self = $class->new({ options => $array_ref, ... });
 
 Object constructor. Creates a new object representing the script meta
 information.

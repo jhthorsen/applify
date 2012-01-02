@@ -8,16 +8,16 @@ plan tests => 38;
 
 {
     my $app = eval q[use Applify; app {}] or BAIL_OUT $@;
-    my $script = $app->script;
+    my $script = $app->_script;
 
     isa_ok($script, 'Applify');
     can_ok($script, qw/
         option app documentation version
-        caller options
+        options
         new print_help import
     /);
 
-    is($script->caller->[0], 'main', 'called from main::');
+    is($script->{'caller'}->[0], 'main', 'called from main::');
     isa_ok($script->_option_parser, 'Getopt::Long::Parser');
 
     {
@@ -65,7 +65,7 @@ plan tests => 38;
     my $application_class = $script->_generate_application_class(sub{});
     like($application_class, qr{^Applify::__ANON__2__::}, 'generated application class');
     can_ok($application_class, qw/
-        new run script
+        new run _script
         foo_bar foo_2 foo_3
     /);
 
@@ -118,7 +118,7 @@ Usage:
 
 {
     my $app = do 'example/script-simple.pl';
-    my $script = $app->script;
+    my $script = $app->_script;
 
     isa_ok($script, 'Applify');
     can_ok($app, qw/ input_file output_dir dry_run generate_exit_value /);
