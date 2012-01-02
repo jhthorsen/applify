@@ -4,7 +4,7 @@ use lib qw(lib);
 use Test::More;
 use script::simple ();
 
-plan tests => 27;
+plan tests => 38;
 
 {
     my $app = eval q[use script::simple; app {}] or BAIL_OUT $@;
@@ -12,7 +12,7 @@ plan tests => 27;
 
     isa_ok($script, 'script::simple');
     can_ok($script, qw/
-        option app
+        option app documentation version
         caller options
         new print_help import
     /);
@@ -62,11 +62,6 @@ plan tests => 27;
         is($script->_calculate_option_spec({ name => 'a_b', type => 'dir' }), 'a_b=s', 'a_b=s');
     }
 
-    {
-        local $TODO = 'Add support for --version and --man';
-        is_deeply([$script->_default_options], [qw/ help /], 'default options');
-    }
-
     my $application_class = $script->_generate_application_class(sub{});
     like($application_class, qr{^script::simple::__ANON__2__::}, 'generated application class');
     can_ok($application_class, qw/
@@ -74,14 +69,51 @@ plan tests => 27;
         foo_bar foo_2 foo_3
     /);
 
+    is_deeply([$script->_default_options], [qw/ help /], 'default options');
     is((run_method($script, 'print_help'))[0], <<'    HELP', 'print_help()');
 Usage:
    --foo-bar  Foo can something
    --foo-2    foo_2 can something else
  * --foo-3    foo_3 can also something
+
    --help     Print this help text
 
     HELP
+
+    eval { $script->documentation(undef) };
+    like($@, qr{Usage: documentation }, 'need to give documentation(...) a true value');
+    is($script->documentation('script::simple'), $script, 'documentation(...) return $self on set');
+    is($script->documentation, 'script::simple', 'documentation() return what was set');
+
+    eval { $script->print_version };
+    like($@, qr{Cannot print version}, 'cannot print version without version(...)');
+
+    eval { $script->version(undef) };
+    like($@, qr{Usage: version }, 'need to give version(...) a true value');
+    is($script->version('1.23'), $script, 'version(...) return $self');
+    is($script->version, '1.23', 'version() return what was set');
+
+    is_deeply([$script->_default_options], [qw/ help man version /], 'default options after documentation() and version()');
+    is((run_method($script, 'print_help'))[0], <<'    HELP', 'print_help()');
+Usage:
+   --foo-bar  Foo can something
+   --foo-2    foo_2 can something else
+ * --foo-3    foo_3 can also something
+
+   --help     Print this help text
+   --man      Display manual for this application
+   --version  Print application name and version
+
+    HELP
+
+    is((run_method($script, 'print_version'))[0], <<'    VERSION', 'print_version(numeric)');
+10-script-simple.t version 1.23
+    VERSION
+
+    $script->version('script::simple');
+    is((run_method($script, 'print_version'))[0], <<"    VERSION", 'print_version(module)');
+10-script-simple.t version $script::simple::VERSION
+    VERSION
 }
 
 {
@@ -91,7 +123,7 @@ Usage:
     isa_ok($script, 'script::simple');
     can_ok($app, qw/ input_file output_dir dry_run /);
 
-    eval { $app->run };
+    eval { run_method($app, 'run') };
     is($@, "Required attribute missing: --dry-run\n", '--dry-run missing');
 }
 

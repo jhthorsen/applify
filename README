@@ -36,6 +36,7 @@ EXPORTED FUNCTIONS
         option $type => $name => $documentation;
         option $type => $name => $documentation, $default;
         option $type => $name => $documentation, $default, @args;
+        option $type => $name => $documentation, @args;
 
     This function is used to define options which can be given to this
     application. See "SYNOPSIS" for example code. This function can also be
@@ -86,6 +87,21 @@ EXPORTED FUNCTIONS
             Any other Moose attribute argument may/will be supported in
             future release.
 
+  documentation
+        documentation __FILE__; # current file
+        documentation '/path/to/file';
+        documentation 'Some::Module';
+
+    Specifies where to retrieve documentaion from when giving the "--man"
+    switch to your script.
+
+  version
+        version 'Some::Module';
+        version $num;
+
+    Specifies where to retrieve the version number from when giving the
+    "--version" switch to your script.
+
   app
         app CODE;
 
@@ -118,15 +134,22 @@ METHODS
     information.
 
   print_help
-        $self->print_help;
-
     Will print "options" to selected filehandle (STDOUT by default) in a
     normalized matter. Example:
 
         Usage:
-           --foo   Foo does this and that
-         * --bar   Bar does something else
-           --help  Print this help text
+           --foo      Foo does this and that
+         * --bar      Bar does something else
+
+           --help     Print this help text
+           --man      Display manual for this application
+           --version  Print application name and version
+
+  print_version
+    Will print "version" to selected filehandle (STDOUT by default) in a
+    normalized matter. Example:
+
+        some-script.pl version 1.23
 
   import
     Will export the functions listed under "EXPORTED FUNCTIONS". The

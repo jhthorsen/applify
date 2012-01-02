@@ -41,17 +41,19 @@ are define directly in the script file and not in a module.
 
 use strict;
 use warnings;
-use constant GOT_SUB_NAME => eval 'use Sub::Name; 1' ? 1 : 0;
+use constant SUB_NAME_IS_AVAILABLE => eval 'use Sub::Name; 1' ? 1 : 0;
+use File::Basename ();
 use Getopt::Long ();
 use Cwd ();
 
 our $VERSION = '0.01';
+our $PERLDOC = 'perldoc';
 my $ANON = 1;
 
 sub __new_sub {
     my($fqn, $code) = @_;
     no strict 'refs';
-    if(GOT_SUB_NAME) { *$fqn = Sub::Name::subname($fqn, $code) }
+    if(SUB_NAME_IS_AVAILABLE) { *$fqn = Sub::Name::subname($fqn, $code) }
     else { *$fqn = $code }
 }
 
@@ -62,6 +64,7 @@ sub __new_sub {
     option $type => $name => $documentation;
     option $type => $name => $documentation, $default;
     option $type => $name => $documentation, $default, @args;
+    option $type => $name => $documentation, @args;
 
 This function is used to define options which can be given to this
 application. See L</SYNOPSIS> for example code. This function can also be
@@ -160,6 +163,39 @@ sub option {
     return $self;
 }
 
+=head2 documentation
+
+    documentation __FILE__; # current file
+    documentation '/path/to/file';
+    documentation 'Some::Module';
+
+Specifies where to retrieve documentaion from when giving the C<--man>
+switch to your script.
+
+=cut
+
+sub documentation {
+    return $_[0]->{'documentation'} if(@_ == 1);
+    $_[0]->{'documentation'} = $_[1] or die 'Usage: documentation $file|$module_name;';
+    return $_[0];
+}
+
+=head2 version
+
+    version 'Some::Module';
+    version $num;
+
+Specifies where to retrieve the version number from when giving the
+C<--version> switch to your script.
+
+=cut
+
+sub version {
+    return $_[0]->{'version'} if(@_ == 1);
+    $_[0]->{'version'} = $_[1] or die 'Usage: version $module_name|$num;';
+    return $_[0];
+}
+
 =head2 app
 
     app CODE;
@@ -192,6 +228,14 @@ sub app {
         $self->print_help;
         $self->_exit('help');
     }
+    elsif($app->{'man'}) {
+        system $PERLDOC => $self->documentation;
+        $self->_exit($? >> 8);
+    }
+    elsif($app->{'version'}) {
+        $self->print_version;
+        $self->_exit('version');
+    }
 
     $app = $self->_generate_application_class($code)->new($app);
 
@@ -216,8 +260,14 @@ sub _calculate_option_spec {
 }
 
 sub _default_options {
-    # TODO Add --man and --version options
-    return 'help';
+    my $self = shift;
+    my @default;
+
+    push @default, 'help';
+    push @default, 'man' if($self->documentation);
+    push @default, 'version' if($self->version);
+
+    return @default;
 }
 
 sub _generate_application_class {
@@ -230,7 +280,7 @@ sub _generate_application_class {
     $application_class =~ s![^\w:]!_!g;
     $application_class =~ s!:::+!::!g;
 
-    eval qq[package $application_class; 1] or die $@;
+    eval qq[package $application_class; 1] or die "Failed to generate class: $@";
 
     {
         no strict 'refs';
@@ -304,30 +354,45 @@ sub new {
 
 =head2 print_help
 
-    $self->print_help;
-
 Will print L</options> to selected filehandle (STDOUT by default) in
 a normalized matter. Example:
 
     Usage:
-       --foo   Foo does this and that
-     * --bar   Bar does something else
-       --help  Print this help text
+       --foo      Foo does this and that
+     * --bar      Bar does something else
+
+       --help     Print this help text
+       --man      Display manual for this application
+       --version  Print application name and version
 
 =cut
 
 sub print_help {
     my $self = shift;
-    my $width = length 'help';
+    my @options = @{ $self->{'options'} };
+    my $width = 0;
 
-    for my $option (@{ $self->{'options'} }) {
+    push @options, { name => '' };
+    push @options, { name => 'help', documentation => 'Print this help text' };
+    push @options, { name => 'man', documentation => 'Display manual for this application' } if($self->documentation);
+    push @options, { name => 'version', documentation => 'Print application name and version' } if($self->version);
+    push @options, { name => '' };
+
+    OPTION:
+    for my $option (@options) {
         my $length = length $option->{'name'};
         $width = $length if($width < $length);
     }
 
     print "Usage:\n";
 
-    for my $option (@{ $self->{'options'} }) {
+    OPTION:
+    for my $option (@options) {
+        unless($option->{'name'}) {
+            print "\n";
+            next OPTION;
+        }
+
         printf(" %s --%-${width}s  %s\n",
             $option->{'required'} ? '*' : ' ',
             $option->{'name'},
@@ -335,15 +400,33 @@ sub print_help {
         );
     }
 
-    printf "   --%-${width}s  %s\n", 'help', 'Print this help text';
-    print "\n";
-
     return $self;
+}
+
+=head2 print_version
+
+Will print L</version> to selected filehandle (STDOUT by default) in
+a normalized matter. Example:
+
+    some-script.pl version 1.23
+
+=cut
+
+sub print_version {
+    my $self = shift;
+    my $version = $self->version or die 'Cannot print version without version()';
+
+    unless($version =~ m!^\d!) {
+        eval "use $version; 1" or die "Could not load $version: $@";
+        $version = $version->VERSION;
+    }
+
+    printf "%s version %s\n", File::Basename::basename($0), $version;
 }
 
 sub _exit {
     my($self, $reason) = @_;
-    exit 0 if($reason eq 'help');
+    exit 0 unless($reason =~ /^\d+$/); # may change without warning...
     exit $reason;
 }
 
@@ -356,7 +439,7 @@ will act on a L<script::simple> object created by this method.
 
 sub import {
     my $class = shift;
-    my @caller = CORE::caller(0);
+    my @caller = CORE::caller(1);
     my $self = $class->new({ caller => \@caller });
 
     strict->import;
@@ -366,6 +449,8 @@ sub import {
     no warnings 'redefine'; # need to allow redefine when loading a new app
     *{"$caller[0]\::app"} = sub (&) { $self->app(@_) };
     *{"$caller[0]\::option"} = sub { $self->option(@_) };
+    *{"$caller[0]\::version"} = sub { $self->version(@_) };
+    *{"$caller[0]\::documentation"} = sub { $self->documentation(@_) };
 }
 
 =head1 COPYRIGHT & LICENSE
