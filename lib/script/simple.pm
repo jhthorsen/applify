@@ -154,8 +154,6 @@ sub option {
         @args = @_;
     }
 
-    $name =~ s!_!-!g;
-
     push @{ $self->{'options'} }, {
         default => $default,
         @args,
@@ -203,6 +201,21 @@ sub method {
     return $self;
 }
 
+=head2 extends
+
+    extends @modules;
+
+Specify which modules this application should inherit from. These
+objects can be L<Moose> based.
+
+=cut
+
+sub extends {
+    my $self = shift;
+    $self->{'extends'} = [@_];
+    return $self;
+}
+
 =head2 version
 
     version 'Some::Module';
@@ -238,11 +251,11 @@ sub app {
     my($self, $code) = @_;
     my $app = {};
     my $parser = $self->_option_parser;
-    my(@options_spec, $application_class);
+    my(@options_spec, %defaults, $application_class);
 
     for my $option (@{ $self->{'options'} }) {
         push @options_spec, $self->_calculate_option_spec($option);
-        $app->{$option->{'name'}} = $option->{'default'}; # set defaults on application object
+        $defaults{$option->{'name'}} = $option->{'default'} if(exists $option->{'default'}); # set defaults on application object
     }
 
     $parser->getoptions($app, @options_spec, $self->_default_options);
@@ -260,7 +273,11 @@ sub app {
         $self->_exit('version');
     }
 
-    $app = $self->_generate_application_class($code)->new($app);
+    $application_class = $self->_generate_application_class($code);
+    $app = $application_class->new({
+                %defaults,
+                map { my $k = $self->_option_to_attr($_); $k => $app->{$_} } keys %$app,
+            });
 
     return $app if(defined wantarray); # $app = do $script_file;
     $self->_exit($app->run(@ARGV));
@@ -268,7 +285,7 @@ sub app {
 
 sub _calculate_option_spec {
     my($self, $option) = @_;
-    my $spec = $option->{'name'};
+    my $spec = $self->_attr_to_option($option->{'name'});
 
     if($option->{'type'} =~ /^(?:bool|flag)/i) { $spec .= '!' }
     elsif($option->{'type'} =~ /^inc/) { $spec .= '+' }
@@ -296,6 +313,7 @@ sub _default_options {
 sub _generate_application_class {
     my($self, $code) = @_;
     my $application_class = join '::', ref($self), "__ANON__${ANON}__", Cwd::abs_path($self->{'caller'}[1]);
+    my $extends = $self->{'extends'} || [];
     my @required;
 
     $ANON++;
@@ -303,17 +321,22 @@ sub _generate_application_class {
     $application_class =~ s![^\w:]!_!g;
     $application_class =~ s!:::+!::!g;
 
-    eval qq[package $application_class; 1] or die "Failed to generate class: $@";
+    eval qq[
+        package $application_class;
+        use base qw/ @$extends /;
+        1;
+    ] or die "Failed to generate class: $@";
 
     {
         no strict 'refs';
-        __new_sub "$application_class\::new" => sub { my $class = shift; bless shift, $class };
+
+        __new_sub "$application_class\::new" => sub { my $class = shift; bless shift, $class } unless(grep { $_->can('new') } @$extends);
         __new_sub "$application_class\::script" => sub { $self };
         __new_sub "$application_class\::run" => sub {
             my($app, @extra) = @_;
 
             if(@required = grep { not defined $app->{$_} } @required) {
-                my $required = join ', ', map { "--$_" } @required;
+                my $required = join ', ', map { '--' .$self->_attr_to_option($_) } @required;
                 $app->script->print_help;
                 die "Required attribute missing: $required\n";
             }
@@ -324,7 +347,6 @@ sub _generate_application_class {
         for my $option (@{ $self->{'options'} }) {
             my $name = $option->{'name'};
             my $fqn = join '::', $application_class, $option->{'name'};
-            $fqn =~ s!-!_!g;
             __new_sub $fqn => sub { $_[0]->{$name} };
             push @required, $name if($option->{'required'});
         }
@@ -417,14 +439,11 @@ sub print_help {
 
     OPTION:
     for my $option (@options) {
-        unless($option->{'name'}) {
-            print "\n";
-            next OPTION;
-        }
+        my $name = $self->_attr_to_option($option->{'name'}) or do { print "\n"; next OPTION };
 
         printf(" %s --%-${width}s  %s\n",
             $option->{'required'} ? '*' : ' ',
-            $option->{'name'},
+            $name,
             $option->{'documentation'},
         );
     }
@@ -459,6 +478,18 @@ sub _exit {
     exit $reason;
 }
 
+sub _attr_to_option {
+    local $_ = $_[1] or return;
+    s!_!-!g;
+    $_;
+}
+
+sub _option_to_attr {
+    local $_ = $_[1] or return;
+    s!-!_!g;
+    $_;
+}
+
 =head2 import
 
 Will export the functions listed under L</EXPORTED FUNCTIONS>. The functions
@@ -481,6 +512,7 @@ sub import {
     *{"$caller[0]\::version"} = sub { $self->version(@_) };
     *{"$caller[0]\::documentation"} = sub { $self->documentation(@_) };
     *{"$caller[0]\::method"} = sub { $self->method(@_) };
+    *{"$caller[0]\::extends"} = sub { $self->extends(@_) };
 }
 
 =head1 COPYRIGHT & LICENSE

@@ -37,7 +37,7 @@ plan tests => 38;
         {
             default => undef,
             type => 'str',
-            name => 'foo-bar',
+            name => 'foo_bar',
             documentation => 'Foo can something',
         }
     ], 'add foo as option');
@@ -49,17 +49,17 @@ plan tests => 38;
     is($script->options->[2]{'default'}, 123, 'foo_3 has default value');
     is($script->options->[2]{'required'}, 1, 'foo_3 is required');
 
-    is($script->_calculate_option_spec({ name => 'a_b', type => 'bool' }), 'a_b!', 'a_b!');
-    is($script->_calculate_option_spec({ name => 'a_b', type => 'flag' }), 'a_b!', 'a_b!');
-    is($script->_calculate_option_spec({ name => 'a_b', type => 'inc' }), 'a_b+', 'a_b+');
-    is($script->_calculate_option_spec({ name => 'a_b', type => 'str' }), 'a_b=s', 'a_b=s');
-    is($script->_calculate_option_spec({ name => 'a_b', type => 'int' }), 'a_b=i', 'a_b=i');
-    is($script->_calculate_option_spec({ name => 'a_b', type => 'num' }), 'a_b=f', 'a_b=f');
+    is($script->_calculate_option_spec({ name => 'a_b', type => 'bool' }), 'a-b!', 'a_b!');
+    is($script->_calculate_option_spec({ name => 'a_b', type => 'flag' }), 'a-b!', 'a_b!');
+    is($script->_calculate_option_spec({ name => 'a_b', type => 'inc' }), 'a-b+', 'a_b+');
+    is($script->_calculate_option_spec({ name => 'a_b', type => 'str' }), 'a-b=s', 'a_b=s');
+    is($script->_calculate_option_spec({ name => 'a_b', type => 'int' }), 'a-b=i', 'a_b=i');
+    is($script->_calculate_option_spec({ name => 'a_b', type => 'num' }), 'a-b=f', 'a_b=f');
 
     {
         local $TODO = 'Add proper support for file/dir';
-        is($script->_calculate_option_spec({ name => 'a_b', type => 'file' }), 'a_b=s', 'a_b=s');
-        is($script->_calculate_option_spec({ name => 'a_b', type => 'dir' }), 'a_b=s', 'a_b=s');
+        is($script->_calculate_option_spec({ name => 'a_b', type => 'file' }), 'a-b=s', 'a_b=s');
+        is($script->_calculate_option_spec({ name => 'a_b', type => 'dir' }), 'a-b=s', 'a_b=s');
     }
 
     my $application_class = $script->_generate_application_class(sub{});

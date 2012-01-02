@@ -17,6 +17,10 @@ SYNOPSIS
         option dir => output_dir => 'Directory to write files to';
         option flag => dry_run => 'Use --no-dry-run to actually do something', 1;
 
+        method generate_exit_value => sub {
+            return int rand 100;
+        };
+
         app {
             my($self, @extra) = @_;
             my $exit_value = 0;
@@ -28,7 +32,7 @@ SYNOPSIS
                 die 'Will not run script';
             }
 
-            return $exit_value;
+            return $self->generate_exit_value;
         };
 
 EXPORTED FUNCTIONS
@@ -94,6 +98,18 @@ EXPORTED FUNCTIONS
 
     Specifies where to retrieve documentaion from when giving the "--man"
     switch to your script.
+
+  method
+        method $method_name => CODE;
+
+    Used to define methods which should be available on the application
+    object.
+
+  extends
+        extends @modules;
+
+    Specify which modules this application should inherit from. These
+    objects can be Moose based.
 
   version
         version 'Some::Module';
