@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 use lib 'lib';
-use script::simple;
+use Applify;
 
 option file => input_file => 'File to read from', 'Makefile.PL';
 option dir => output_dir => 'Directory to write files to', '.';
@@ -37,6 +37,6 @@ This script is just an example script...
 
 =head1 AUTHOR
 
-See L<script::simple>.
+See L<Applify>.
 
 =cut

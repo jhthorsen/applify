@@ -1,8 +1,8 @@
-package script::simple;
+package Applify;
 
 =head1 NAME
 
-script::simple - Write object oriented scripts with ease
+Applify - Write object oriented scripts with ease
 
 =head1 VERSION
 
@@ -17,7 +17,7 @@ are define directly in the script file and not in a module.
 =head1 SYNOPSIS
 
     #!/usr/bin/perl
-    use script::simple;
+    use Applify;
 
     option file => input_file => 'File to read from';
     option dir => output_dir => 'Directory to write files to';
@@ -493,7 +493,7 @@ sub _option_to_attr {
 =head2 import
 
 Will export the functions listed under L</EXPORTED FUNCTIONS>. The functions
-will act on a L<script::simple> object created by this method.
+will act on a L<Applify> object created by this method.
 
 =cut
 

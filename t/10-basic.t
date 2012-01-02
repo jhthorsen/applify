@@ -2,15 +2,15 @@ use warnings;
 use strict;
 use lib qw(lib);
 use Test::More;
-use script::simple ();
+use Applify ();
 
 plan tests => 38;
 
 {
-    my $app = eval q[use script::simple; app {}] or BAIL_OUT $@;
+    my $app = eval q[use Applify; app {}] or BAIL_OUT $@;
     my $script = $app->script;
 
-    isa_ok($script, 'script::simple');
+    isa_ok($script, 'Applify');
     can_ok($script, qw/
         option app documentation version
         caller options
@@ -63,7 +63,7 @@ plan tests => 38;
     }
 
     my $application_class = $script->_generate_application_class(sub{});
-    like($application_class, qr{^script::simple::__ANON__2__::}, 'generated application class');
+    like($application_class, qr{^Applify::__ANON__2__::}, 'generated application class');
     can_ok($application_class, qw/
         new run script
         foo_bar foo_2 foo_3
@@ -82,8 +82,8 @@ Usage:
 
     eval { $script->documentation(undef) };
     like($@, qr{Usage: documentation }, 'need to give documentation(...) a true value');
-    is($script->documentation('script::simple'), $script, 'documentation(...) return $self on set');
-    is($script->documentation, 'script::simple', 'documentation() return what was set');
+    is($script->documentation('Applify'), $script, 'documentation(...) return $self on set');
+    is($script->documentation, 'Applify', 'documentation() return what was set');
 
     eval { $script->print_version };
     like($@, qr{Cannot print version}, 'cannot print version without version(...)');
@@ -107,12 +107,12 @@ Usage:
     HELP
 
     is((run_method($script, 'print_version'))[0], <<'    VERSION', 'print_version(numeric)');
-10-script-simple.t version 1.23
+10-basic.t version 1.23
     VERSION
 
-    $script->version('script::simple');
+    $script->version('Applify');
     is((run_method($script, 'print_version'))[0], <<"    VERSION", 'print_version(module)');
-10-script-simple.t version $script::simple::VERSION
+10-basic.t version $Applify::VERSION
     VERSION
 }
 
@@ -120,7 +120,7 @@ Usage:
     my $app = do 'example/script-simple.pl';
     my $script = $app->script;
 
-    isa_ok($script, 'script::simple');
+    isa_ok($script, 'Applify');
     can_ok($app, qw/ input_file output_dir dry_run generate_exit_value /);
 
     eval { run_method($app, 'run') };

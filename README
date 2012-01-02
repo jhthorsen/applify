@@ -1,5 +1,5 @@
 NAME
-    script::simple - Write object oriented scripts with ease
+    Applify - Write object oriented scripts with ease
 
 VERSION
     0.01
@@ -11,7 +11,7 @@ DESCRIPTION
 
 SYNOPSIS
         #!/usr/bin/perl
-        use script::simple;
+        use Applify;
 
         option file => input_file => 'File to read from';
         option dir => output_dir => 'Directory to write files to';
@@ -169,7 +169,7 @@ METHODS
 
   import
     Will export the functions listed under "EXPORTED FUNCTIONS". The
-    functions will act on a script::simple object created by this method.
+    functions will act on a Applify object created by this method.
 
 COPYRIGHT & LICENSE
     This library is free software. You can redistribute it and/or modify it

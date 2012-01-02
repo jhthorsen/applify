@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use lib qw(lib);
 use Test::More;
-use script::simple ();
+use Applify ();
 
 plan skip_all => 'Moose is not available' unless(eval 'use Moose; 1');
 plan tests => 5;
@@ -20,7 +20,7 @@ plan tests => 5;
 
     local @ARGV = qw/ --o-foo 42 /;
     my $app = eval q[
-        use script::simple;
+        use Applify;
         extends 'My::Class';
         option int => o_foo => 'Some option';
         app {
