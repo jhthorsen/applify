@@ -4,12 +4,19 @@ use lib qw(lib);
 use Test::More;
 use Applify ();
 
-plan tests => 38;
+plan tests => 40;
 
 {
-    my $app = eval q[use Applify; app {}] or BAIL_OUT $@;
+    my $app = eval q[
+        use Applify;
+        sub app::foo { 1 }
+        app { 0 };
+    ] or BAIL_OUT $@;
+
     my $script = $app->_script;
 
+    ok(!app->can('foo'), 'foo() was removed from app:: namespace');
+    ok($app->can('foo'), '...and into the $app namespace');
     isa_ok($script, 'Applify');
     can_ok($script, qw/
         option app documentation version

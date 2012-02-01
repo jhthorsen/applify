@@ -9,9 +9,9 @@ option flag => dry_run => 'Use --no-dry-run to actually do something', required 
 version 1.23;
 documentation __FILE__;
 
-method generate_exit_value => sub {
+sub app::generate_exit_value {
     return int rand 100;
-};
+}
 
 app {
     my($self, @extra) = @_;

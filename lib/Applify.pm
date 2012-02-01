@@ -26,7 +26,7 @@ are define directly in the script file and not in a module.
     documentation __FILE__;
     version 1.23;
 
-    method generate_exit_value => sub {
+    sub app::generate_exit_value => sub {
         return int rand 100;
     };
 
@@ -34,6 +34,7 @@ are define directly in the script file and not in a module.
         my($self, @extra) = @_;
         my $exit_value = 0;
 
+        print "Extra arguments: @extra\n" if(@extra);
         print "Will read from: ", $self->input_file, "\n";
         print "Will write files to: ", $self->output_dir, "\n";
 
@@ -62,8 +63,7 @@ This method is basically the code block given to L</app>.
 
 =item * Other methods
 
-Other methods available must either be defined with the L</method>
-keyword or be available through inheritance.
+Other methods must be defined in the C<app::> namespace.
 
 =item * _script()
 
@@ -96,8 +96,8 @@ my $ANON = 1;
 sub __new_sub {
     my($fqn, $code) = @_;
     no strict 'refs';
-    if(SUB_NAME_IS_AVAILABLE) { *$fqn = Sub::Name::subname($fqn, $code) }
-    else { *$fqn = $code }
+    *$fqn = Sub::Name::subname($fqn, $code) if SUB_NAME_IS_AVAILABLE;
+    *$fqn = $code unless SUB_NAME_IS_AVAILABLE;
 }
 
 =head1 EXPORTED FUNCTIONS
@@ -237,25 +237,6 @@ sub version {
     return $_[0];
 }
 
-=head2 method
-
-    method $method_name => CODE;
-
-Used to define methods which should be available on the
-application object.
-
-=cut
-
-sub method {
-    my $self = shift;
-    my $name = shift or die 'Usage: method $name => ...';
-    my $code = shift or die 'Usage: method $name => CODE';
-
-    $self->{'methods'}{$name} = $code;
-
-    return $self;
-}
-
 =head2 extends
 
     extends @classes;
@@ -368,6 +349,7 @@ sub _generate_application_class {
 
     {
         no strict 'refs';
+        my $methods = \%{'app::'};
 
         __new_sub "$application_class\::new" => sub { my $class = shift; bless shift, $class } unless(grep { $_->can('new') } @$extends);
         __new_sub "$application_class\::_script" => sub { $self };
@@ -390,9 +372,12 @@ sub _generate_application_class {
             push @required, $name if($option->{'required'});
         }
 
-        for my $name (keys %{ $self->{'methods'} }) {
+        
+        for my $name (keys %$methods) {
+            my $code = *{$methods->{$name}}{'CODE'} or next;
             my $fqn = join '::', $application_class, $name;
-            __new_sub $fqn => $self->{'methods'}{$name};
+            __new_sub $fqn => $code;
+            delete $methods->{$name}; # may be a bit too destructive?
         }
     }
 
@@ -428,7 +413,6 @@ sub new {
     my $self = bless $args, $class;
 
     $self->{'options'} ||= [];
-    $self->{'methods'} ||= {};
     $self->{'caller'} or die 'Usage: $self->new({ caller => [...], ... })';
 
     return $self;

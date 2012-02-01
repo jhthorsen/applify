@@ -20,7 +20,7 @@ SYNOPSIS
         documentation __FILE__;
         version 1.23;
 
-        method generate_exit_value => sub {
+        sub app::generate_exit_value => sub {
             return int rand 100;
         };
 
@@ -28,6 +28,7 @@ SYNOPSIS
             my($self, @extra) = @_;
             my $exit_value = 0;
 
+            print "Extra arguments: @extra\n" if(@extra);
             print "Will read from: ", $self->input_file, "\n";
             print "Will write files to: ", $self->output_dir, "\n";
 
@@ -53,8 +54,7 @@ APPLICATION CLASS
 
     *   Other methods
 
-        Other methods available must either be defined with the "method"
-        keyword or be available through inheritance.
+        Other methods must be defined in the "app::" namespace.
 
     *   _script()
 
@@ -140,12 +140,6 @@ EXPORTED FUNCTIONS
     Specifies where to retrieve the version number from when giving the
     "--version" switch to your script.
 
-  method
-        method $method_name => CODE;
-
-    Used to define methods which should be available on the application
-    object.
-
   extends
         extends @classes;
 
@@ -170,15 +164,9 @@ ATTRIBUTES
 
     Holds the application options given to "option".
 
-  caller
-        $array_ref = $self->caller;
-
-    Holds information about the caller script file/namespace. See also
-    "caller" in perlfunc.
-
 METHODS
   new
-        $self = $class->new({ caller => $array_ref, ... });
+        $self = $class->new({ options => $array_ref, ... });
 
     Object constructor. Creates a new object representing the script meta
     information.
