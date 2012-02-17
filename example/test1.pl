@@ -17,6 +17,7 @@ app {
     my($self, @extra) = @_;
     my $exit_value = 0;
 
+    print "Extra arguments: @extra\n" if(@extra);
     print "Will read from: ", $self->input_file, "\n";
     print "Will write files to: ", $self->output_dir, "\n";
 
@@ -29,7 +30,7 @@ app {
 
 =head1 NAME
 
-script-simple.pl - Example script
+test1.pl - Example script
 
 =head1 DESCRIPTION
 

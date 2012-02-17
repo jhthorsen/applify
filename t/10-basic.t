@@ -117,7 +117,7 @@ Usage:
 }
 
 {
-    my $app = do 'example/script-simple.pl';
+    my $app = do 'example/test1.pl';
     my $script = $app->_script;
 
     isa_ok($script, 'Applify');
