@@ -84,10 +84,13 @@ application object.
 
 use strict;
 use warnings;
-use constant SUB_NAME_IS_AVAILABLE => eval 'use Sub::Name; 1' ? 1 : 0;
 use File::Basename ();
 use Getopt::Long ();
-use Cwd ();
+
+use constant SUB_NAME_IS_AVAILABLE
+    => $INC{'App/FatPacker/Trace.pm'} ? 0 # this will be true when running under "fatpack"
+     : eval 'use Sub::Name; 1'        ? 1
+     :                                  0;
 
 our $VERSION = '0.01';
 our $PERLDOC = 'perldoc';
@@ -332,7 +335,7 @@ sub _default_options {
 
 sub _generate_application_class {
     my($self, $code) = @_;
-    my $application_class = join '::', ref($self), "__ANON__${ANON}__", Cwd::abs_path($self->{'caller'}[1]);
+    my $application_class = join '::', ref($self), "__ANON__${ANON}__", $self->{'caller'}[1];
     my $extends = $self->{'extends'} || [];
     my @required;
 
