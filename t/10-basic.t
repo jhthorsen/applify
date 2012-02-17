@@ -4,7 +4,7 @@ use lib qw(lib);
 use Test::More;
 use Applify ();
 
-plan tests => 40;
+plan tests => 42;
 
 {
     my $app = eval q[
@@ -132,6 +132,10 @@ Usage:
 
     eval { run_method($app, 'run') };
     is($@, "Required attribute missing: --dry-run\n", '--dry-run missing');
+
+    is($app->dry_run, undef, '--dry-run is not set');
+    $app->dry_run(1);
+    is($app->dry_run, 1, '--dry-run was set');
 }
 
 sub run_method {

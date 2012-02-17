@@ -370,7 +370,7 @@ sub _generate_application_class {
         for my $option (@{ $self->{'options'} }) {
             my $name = $option->{'name'};
             my $fqn = join '::', $application_class, $option->{'name'};
-            __new_sub $fqn => sub { $_[0]->{$name} };
+            __new_sub $fqn => sub { @_ == 2 and $_[0]->{$name} = $_[1]; $_[0]->{$name} };
             push @required, $name if($option->{'required'});
         }
 
