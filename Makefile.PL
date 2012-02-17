@@ -9,7 +9,7 @@ requires q(Cwd) => 3.31;
 
 bugtracker q(http://rt.cpan.org/NoAuth/Bugs.html?Dist=Applify);
 homepage q(http://metacpan.org/dist/Applify);
-repository q(https://jhthorsen@github.com/jhthorsen/Applify.git);
+repository q(https://github.com/jhthorsen/applify.git);
 
 # install_script glob('bin/*');
 auto_install;
