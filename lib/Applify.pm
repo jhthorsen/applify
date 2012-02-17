@@ -335,14 +335,13 @@ sub _default_options {
 
 sub _generate_application_class {
     my($self, $code) = @_;
-    my $application_class = join '::', ref($self), "__ANON__${ANON}__", $self->{'caller'}[1];
+    my $application_class = $self->{'caller'}[1];
     my $extends = $self->{'extends'} || [];
     my @required;
 
+    $application_class =~ s!\W!_!g;
+    $application_class = join '::', ref($self), "__ANON__${ANON}__", $application_class;
     $ANON++;
-    $application_class =~ s![\/]!::!g;
-    $application_class =~ s![^\w:]!_!g;
-    $application_class =~ s!:::+!::!g;
 
     eval qq[
         package $application_class;
