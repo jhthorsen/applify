@@ -2,6 +2,7 @@ Revision history for Applify
 
 0.02
        * Options can be set in application
+       * --help will include SYNOPSIS
 
 0.01     Fri Feb 17 21:54:24 CET 2012
        * Add option keyword

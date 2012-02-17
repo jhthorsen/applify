@@ -446,6 +446,8 @@ sub print_help {
     push @options, { name => 'version', documentation => 'Print application name and version' } if($self->version);
     push @options, { name => '' };
 
+    $self->_print_synopsis;
+
     OPTION:
     for my $option (@options) {
         my $length = length $option->{'name'};
@@ -466,6 +468,26 @@ sub print_help {
     }
 
     return $self;
+}
+
+sub _print_synopsis {
+    my $self = shift;
+    my $documentation = $self->documentation or return;
+    my $print;
+
+    unless(-e $documentation) {
+        eval "use $documentation; 1" or die "Could not load $documentation: $@";
+        $documentation =~ s!::!/!g;
+        $documentation = $INC{"$documentation.pm"};
+    }
+
+    open my $FH, '<', $documentation or die "Failed to read synopsis from $documentation: $@";
+
+    while(<$FH>) {
+        last if($print and /^=(?:cut|head1)/);
+        print if($print);
+        $print = 1 if(/^=head1 SYNOPSIS/);
+    }
 }
 
 =head2 print_version

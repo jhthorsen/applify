@@ -100,8 +100,12 @@ Usage:
     is($script->version('1.23'), $script, 'version(...) return $self');
     is($script->version, '1.23', 'version() return what was set');
 
+    $script->documentation(__FILE__);
     is_deeply([$script->_default_options], [qw/ help man version /], 'default options after documentation() and version()');
     is((run_method($script, 'print_help'))[0], <<'    HELP', 'print_help()');
+
+dummy synopsis...
+
 Usage:
    --foo-bar  Foo can something
    --foo-2    foo_2 can something else
@@ -130,7 +134,7 @@ Usage:
     isa_ok($script, 'Applify');
     can_ok($app, qw/ input_file output_dir dry_run generate_exit_value /);
 
-    eval { run_method($app, 'run') };
+    run_method($app, 'run');
     is($@, "Required attribute missing: --dry-run\n", '--dry-run missing');
 
     is($app->dry_run, undef, '--dry-run is not set');
@@ -146,5 +150,12 @@ sub run_method {
     my $stderr = '';
     open STDOUT, '>', \$stdout;
     open STDERR, '>', \$stderr;
-    return $stdout, $stderr, $thing->$method(@args);
+    my $ret = eval { $thing->$method(@args) };
+    return $@ || $stdout, $@ || $stderr, $ret;
 }
+
+=head1 SYNOPSIS
+
+dummy synopsis...
+
+=cut

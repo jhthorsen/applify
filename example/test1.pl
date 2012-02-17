@@ -32,6 +32,12 @@ app {
 
 test1.pl - Example script
 
+=head1 SYNOPSIS
+
+Some description...
+
+    test1.pl --help
+
 =head1 DESCRIPTION
 
 This script is just an example script...
