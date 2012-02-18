@@ -4,7 +4,7 @@ use lib qw(lib);
 use Test::More;
 use Applify ();
 
-plan tests => 42;
+plan tests => 44;
 
 {
     my $app = eval q[
@@ -62,6 +62,8 @@ plan tests => 42;
     is($script->_calculate_option_spec({ name => 'a_b', type => 'str' }), 'a-b=s', 'a_b=s');
     is($script->_calculate_option_spec({ name => 'a_b', type => 'int' }), 'a-b=i', 'a_b=i');
     is($script->_calculate_option_spec({ name => 'a_b', type => 'num' }), 'a-b=f', 'a_b=f');
+    is($script->_calculate_option_spec({ name => 'a_b', type => 'num', n_of => '@' }), 'a-b=f@', 'a_b=f@');
+    is($script->_calculate_option_spec({ name => 'a_b', type => 'num', n_of => '0,3' }), 'a-b=f{0,3}', 'a_b=f{0,3}');
 
     {
         local $TODO = 'Add proper support for file/dir';

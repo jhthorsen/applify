@@ -170,6 +170,11 @@ Used as description text when printing the usage text.
 
 The script will not start if a required field is omitted.
 
+=item * C<n_of>
+
+Allow the option to hold a list of values. Examples: "@", "4", "1,3".
+See L<Getopt::Long/Options-with-multiple-values> for details.
+
 =item * Other
 
 Any other L<Moose> attribute argument may/will be supported in
@@ -274,14 +279,17 @@ sub app {
     my($self, $code) = @_;
     my $app = {};
     my $parser = $self->_option_parser;
-    my(@options_spec, %defaults, $application_class);
+    my(@options_spec, $application_class);
 
     for my $option (@{ $self->{'options'} }) {
+        my $switch = $self->_attr_to_option($option->{'name'});
         push @options_spec, $self->_calculate_option_spec($option);
-        $defaults{$option->{'name'}} = $option->{'default'} if(exists $option->{'default'}); # set defaults on application object
+        $app->{$switch} = $option->{'default'} if(exists $option->{'default'});
     }
 
-    $parser->getoptions($app, @options_spec, $self->_default_options);
+    unless($parser->getoptions($app, @options_spec, $self->_default_options)) {
+        $self->_exit(1);
+    }
 
     if($app->{'help'}) {
         $self->print_help;
@@ -298,7 +306,6 @@ sub app {
 
     $application_class = $self->_generate_application_class($code);
     $app = $application_class->new({
-                %defaults,
                 map { my $k = $self->_option_to_attr($_); $k => $app->{$_} } keys %$app,
             });
 
@@ -318,6 +325,12 @@ sub _calculate_option_spec {
     elsif($option->{'type'} =~ /^file/) { $spec .= '=s' } # TODO
     elsif($option->{'type'} =~ /^dir/) { $spec .= '=s' } # TODO
     else { die 'Usage: option {bool|flag|inc|str|int|num|file|dir} ...' }
+
+    if(my $n_of = $option->{'n_of'}) {
+        $spec .= $n_of eq '@' ? $n_of : "{$n_of}";
+        $option->{'default'} and ref $option->{'default'} ne 'ARRAY' and die 'Usage option ... default => [Need to be an array ref]';
+        $option->{'default'} ||= [];
+    }
 
     return $spec;
 }
