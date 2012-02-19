@@ -2,7 +2,7 @@ NAME
     Applify - Write object oriented scripts with ease
 
 VERSION
-    0.01
+    0.02
 
 DESCRIPTION
     This module should keep all the noise away and let you write scripts
@@ -119,6 +119,12 @@ EXPORTED FUNCTIONS
         *   "required"
 
             The script will not start if a required field is omitted.
+
+        *   "n_of"
+
+            Allow the option to hold a list of values. Examples: "@", "4",
+            "1,3". See "Options-with-multiple-values" in Getopt::Long for
+            details.
 
         *   Other
 

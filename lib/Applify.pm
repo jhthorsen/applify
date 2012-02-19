@@ -6,7 +6,7 @@ Applify - Write object oriented scripts with ease
 
 =head1 VERSION
 
-0.01
+0.02
 
 =head1 DESCRIPTION
 
@@ -92,7 +92,7 @@ use constant SUB_NAME_IS_AVAILABLE
      : eval 'use Sub::Name; 1'        ? 1
      :                                  0;
 
-our $VERSION = eval '0.01';
+our $VERSION = eval '0.02';
 our $PERLDOC = 'perldoc';
 my $ANON = 1;
 

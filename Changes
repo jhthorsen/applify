@@ -1,6 +1,6 @@
 Revision history for Applify
 
-0.02
+0.02     Sun Feb 19 18:33:15 2012
        * Options can be set in application
        * Options can take (n_of => '...')
        * --help will include SYNOPSIS
