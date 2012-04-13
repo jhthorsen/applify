@@ -563,7 +563,6 @@ sub import {
     *{"$caller[0]\::option"} = sub { $self->option(@_) };
     *{"$caller[0]\::version"} = sub { $self->version(@_) };
     *{"$caller[0]\::documentation"} = sub { $self->documentation(@_) };
-    *{"$caller[0]\::method"} = sub { $self->method(@_) };
     *{"$caller[0]\::extends"} = sub { $self->extends(@_) };
 }
 
