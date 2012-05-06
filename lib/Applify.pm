@@ -26,7 +26,7 @@ are define directly in the script file and not in a module.
     documentation __FILE__;
     version 1.23;
 
-    sub app::generate_exit_value => sub {
+    sub generate_exit_value => sub {
         return int rand 100;
     };
 
@@ -63,7 +63,8 @@ This method is basically the code block given to L</app>.
 
 =item * Other methods
 
-Other methods must be defined in the C<app::> namespace.
+Other methods defined in the script file will be accesible from C<$self>
+inside C<app{}>.
 
 =item * _script()
 
@@ -360,12 +361,10 @@ sub _generate_application_class {
         package $application_class;
         use base qw/ @$extends /;
         1;
-    ] or die "Failed to generate class: $@";
+    ] or die "Failed to generate applicatin class: $@";
 
     {
         no strict 'refs';
-        my $methods = \%{'app::'};
-
         __new_sub "$application_class\::new" => sub { my $class = shift; bless shift, $class } unless(grep { $_->can('new') } @$extends);
         __new_sub "$application_class\::_script" => sub { $self };
         __new_sub "$application_class\::run" => sub {
@@ -380,19 +379,23 @@ sub _generate_application_class {
             return $app->$code(@extra);
         };
 
+        for('app', $self->{'caller'}[0]) {
+            my $ns = \%{"$_\::"};
+
+            for my $name (keys %$ns) {
+                $self->{'keep_subs'}{$name} and next;
+                my $code = *{$ns->{$name}}{'CODE'} or next;
+                my $fqn = join '::', $application_class, $name;
+                __new_sub $fqn => $code;
+                delete $ns->{$name}; # may be a bit too destructive?
+            }
+        }
+
         for my $option (@{ $self->{'options'} }) {
             my $name = $option->{'name'};
             my $fqn = join '::', $application_class, $option->{'name'};
             __new_sub $fqn => sub { @_ == 2 and $_[0]->{$name} = $_[1]; $_[0]->{$name} };
             push @required, $name if($option->{'required'});
-        }
-
-        
-        for my $name (keys %$methods) {
-            my $code = *{$methods->{$name}}{'CODE'} or next;
-            my $fqn = join '::', $application_class, $name;
-            __new_sub $fqn => $code;
-            delete $methods->{$name}; # may be a bit too destructive?
         }
     }
 
@@ -553,11 +556,16 @@ sub import {
     my $class = shift;
     my @caller = CORE::caller(1);
     my $self = $class->new({ caller => \@caller });
+    my $ns = $caller[0] .'::';
 
     strict->import;
     warnings->import;
 
     no strict 'refs';
+    for my $name (keys %$ns) {
+        $self->{'keep_subs'}{$name} = 1;
+    }
+
     no warnings 'redefine'; # need to allow redefine when loading a new app
     *{"$caller[0]\::app"} = sub (&) { $self->app(@_) };
     *{"$caller[0]\::option"} = sub { $self->option(@_) };

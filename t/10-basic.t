@@ -4,25 +4,34 @@ use lib qw(lib);
 use Test::More;
 use Applify ();
 
-plan tests => 44;
+plan tests => 48;
 
 {
     my $app = eval q[
+        package main;
+        sub not_app_method { 1 }
         use Applify;
         sub app::foo { 1 }
+        sub bar { 1 }
+        sub AUTOLOAD { 'Autoloaded' }
         app { 0 };
     ] or BAIL_OUT $@;
 
     my $script = $app->_script;
 
     ok(!app->can('foo'), 'foo() was removed from app:: namespace');
+    ok(!main->can('bar'), 'bar() was removed from main:: namespace');
+    ok(main->can('not_app_method'), 'not_app_method() was not removed from main:: namespace');
     ok($app->can('foo'), '...and into the $app namespace');
+    ok(!$app->can('not_app_method'), 'not_app_method() was not applied to app class');
     isa_ok($script, 'Applify');
     can_ok($script, qw/
         option app documentation version
         options
         new print_help import
     /);
+
+    is(eval { $app->i_am_autoloaded }, 'Autoloaded', 'AUTOLOAD works') or diag $@;
 
     is($script->{'caller'}->[0], 'main', 'called from main::');
     isa_ok($script->_option_parser, 'Getopt::Long::Parser');
