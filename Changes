@@ -1,6 +1,6 @@
 Revision history for Applify
 
-0.03
+0.03     Sun May  6 11:13:08 2012
        * Methods do not need to be defined in the app:: namespace
 
 0.02     Sun Feb 19 18:33:15 2012
