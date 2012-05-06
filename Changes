@@ -1,7 +1,11 @@
 Revision history for Applify
 
+0.04     Sun May  6 11:36:19 2012
+       * Fix app, option(), ... should not be defined to the appliction
+         namespace.
+
 0.03     Sun May  6 11:13:08 2012
-       * Methods do not need to be defined in the app:: namespace
+       * Methods do not need to be defined in the app:: namespace.
 
 0.02     Sun Feb 19 18:33:15 2012
        * Options can be set in application

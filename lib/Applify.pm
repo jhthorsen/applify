@@ -6,7 +6,7 @@ Applify - Write object oriented scripts with ease
 
 =head1 VERSION
 
-0.03
+0.04
 
 =head1 DESCRIPTION
 
@@ -93,7 +93,7 @@ use constant SUB_NAME_IS_AVAILABLE
      : eval 'use Sub::Name; 1'        ? 1
      :                                  0;
 
-our $VERSION = eval '0.03';
+our $VERSION = eval '0.04';
 our $PERLDOC = 'perldoc';
 my $ANON = 1;
 
@@ -383,7 +383,7 @@ sub _generate_application_class {
             my $ns = \%{"$_\::"};
 
             for my $name (keys %$ns) {
-                $self->{'keep_subs'}{$name} and next;
+                $self->{'skip_subs'}{$name} and next;
                 my $code = *{$ns->{$name}}{'CODE'} or next;
                 my $fqn = join '::', $application_class, $name;
                 __new_sub $fqn => $code;
@@ -561,9 +561,17 @@ sub import {
     strict->import;
     warnings->import;
 
+    $self->{'skip_subs'} = {
+        app => 1,
+        option => 1,
+        version => 1,
+        documentation => 1,
+        extends => 1,
+    };
+
     no strict 'refs';
     for my $name (keys %$ns) {
-        $self->{'keep_subs'}{$name} = 1;
+        $self->{'skip_subs'}{$name} = 1;
     }
 
     no warnings 'redefine'; # need to allow redefine when loading a new app
