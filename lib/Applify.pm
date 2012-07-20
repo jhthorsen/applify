@@ -99,8 +99,8 @@ my $ANON = 1;
 sub __new_sub {
     my($fqn, $code) = @_;
     no strict 'refs';
-    *$fqn = Sub::Name::subname($fqn, $code) if SUB_NAME_IS_AVAILABLE;
-    *$fqn = $code unless SUB_NAME_IS_AVAILABLE;
+    return if *$fqn{'CODE'};
+    *$fqn = SUB_NAME_IS_AVAILABLE ? Sub::Name::subname($fqn, $code) : $code;
 }
 
 =head1 EXPORTED FUNCTIONS
