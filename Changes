@@ -1,5 +1,8 @@
 Revision history for Applify
 
+0.05     Fri Jul 20 12:13:24 2012
+       * Applify works with Moo
+
 0.04     Sun May  6 11:36:19 2012
        * Fix app, option(), ... should not be defined to the appliction
          namespace.

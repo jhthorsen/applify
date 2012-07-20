@@ -2,7 +2,7 @@ NAME
     Applify - Write object oriented scripts with ease
 
 VERSION
-    0.04
+    0.05
 
 DESCRIPTION
     This module should keep all the noise away and let you write scripts
@@ -20,9 +20,9 @@ SYNOPSIS
         documentation __FILE__;
         version 1.23;
 
-        sub generate_exit_value => sub {
+        sub generate_exit_value {
             return int rand 100;
-        };
+        }
 
         app {
             my($self, @extra) = @_;
