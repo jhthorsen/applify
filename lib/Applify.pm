@@ -524,7 +524,7 @@ sub print_version {
     my $version = $self->version or die 'Cannot print version without version()';
 
     unless($version =~ m!^\d!) {
-        eval "use $version; 1" or die "Could not load $version: $@";
+        eval "require $version; 1" or die "Could not load $version: $@";
         $version = $version->VERSION;
     }
 
@@ -558,7 +558,7 @@ will act on a L<Applify> object created by this method.
 
 sub import {
     my $class = shift;
-    my @caller = CORE::caller(1);
+    my @caller = caller;
     my $self = $class->new({ caller => \@caller });
     my $ns = $caller[0] .'::';
 

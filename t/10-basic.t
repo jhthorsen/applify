@@ -143,6 +143,7 @@ Usage:
 }
 
 {
+    diag 'example/test1.pl';
     my $app = do 'example/test1.pl';
     my $script = $app->_script;
 

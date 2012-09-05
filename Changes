@@ -1,5 +1,11 @@
 Revision history for Applify
 
+0.0501
+       * Fix major bug: Should be caller(0) and not caller(1) in import().
+         This made the perl debugger complain:
+         syntax error at my-script.pl line 28, near "documentation __FILE__"
+         Contributor: Ole Bjørn Hessen
+
 0.05     Fri Jul 20 12:13:24 2012
        * Applify works with Moo
 
