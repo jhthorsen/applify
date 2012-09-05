@@ -99,7 +99,7 @@ my $ANON = 1;
 sub __new_sub {
     my($fqn, $code) = @_;
     no strict 'refs';
-    return if *$fqn{'CODE'};
+    return if *$fqn{CODE};
     *$fqn = SUB_NAME_IS_AVAILABLE ? Sub::Name::subname($fqn, $code) : $code;
 }
 
@@ -201,7 +201,7 @@ sub option {
         @args = @_;
     }
 
-    push @{ $self->{'options'} }, {
+    push @{ $self->{options} }, {
         default => $default,
         @args,
         type => $type,
@@ -224,8 +224,8 @@ switch to your script.
 =cut
 
 sub documentation {
-    return $_[0]->{'documentation'} if(@_ == 1);
-    $_[0]->{'documentation'} = $_[1] or die 'Usage: documentation $file|$module_name;';
+    return $_[0]->{documentation} if(@_ == 1);
+    $_[0]->{documentation} = $_[1] or die 'Usage: documentation $file|$module_name;';
     return $_[0];
 }
 
@@ -240,8 +240,8 @@ C<--version> switch to your script.
 =cut
 
 sub version {
-    return $_[0]->{'version'} if(@_ == 1);
-    $_[0]->{'version'} = $_[1] or die 'Usage: version $module_name|$num;';
+    return $_[0]->{version} if(@_ == 1);
+    $_[0]->{version} = $_[1] or die 'Usage: version $module_name|$num;';
     return $_[0];
 }
 
@@ -256,7 +256,7 @@ classes can be L<Moose> based.
 
 sub extends {
     my $self = shift;
-    $self->{'extends'} = [@_];
+    $self->{extends} = [@_];
     return $self;
 }
 
@@ -281,25 +281,25 @@ sub app {
     my $parser = $self->_option_parser;
     my(@options_spec, $application_class);
 
-    for my $option (@{ $self->{'options'} }) {
-        my $switch = $self->_attr_to_option($option->{'name'});
+    for my $option (@{ $self->{options} }) {
+        my $switch = $self->_attr_to_option($option->{name});
         push @options_spec, $self->_calculate_option_spec($option);
-        $app->{$switch} = $option->{'default'} if(exists $option->{'default'});
+        $app->{$switch} = $option->{default} if(exists $option->{default});
     }
 
     unless($parser->getoptions($app, @options_spec, $self->_default_options)) {
         $self->_exit(1);
     }
 
-    if($app->{'help'}) {
+    if($app->{help}) {
         $self->print_help;
         $self->_exit('help');
     }
-    elsif($app->{'man'}) {
+    elsif($app->{man}) {
         system $PERLDOC => $self->documentation;
         $self->_exit($? >> 8);
     }
-    elsif($app->{'version'}) {
+    elsif($app->{version}) {
         $self->print_version;
         $self->_exit('version');
     }
@@ -315,21 +315,21 @@ sub app {
 
 sub _calculate_option_spec {
     my($self, $option) = @_;
-    my $spec = $self->_attr_to_option($option->{'name'});
+    my $spec = $self->_attr_to_option($option->{name});
 
-    if($option->{'type'} =~ /^(?:bool|flag)/i) { $spec .= '!' }
-    elsif($option->{'type'} =~ /^inc/) { $spec .= '+' }
-    elsif($option->{'type'} =~ /^str/) { $spec .= '=s' }
-    elsif($option->{'type'} =~ /^int/i) { $spec .= '=i' }
-    elsif($option->{'type'} =~ /^num/i) { $spec .= '=f' }
-    elsif($option->{'type'} =~ /^file/) { $spec .= '=s' } # TODO
-    elsif($option->{'type'} =~ /^dir/) { $spec .= '=s' } # TODO
+    if($option->{type} =~ /^(?:bool|flag)/i) { $spec .= '!' }
+    elsif($option->{type} =~ /^inc/) { $spec .= '+' }
+    elsif($option->{type} =~ /^str/) { $spec .= '=s' }
+    elsif($option->{type} =~ /^int/i) { $spec .= '=i' }
+    elsif($option->{type} =~ /^num/i) { $spec .= '=f' }
+    elsif($option->{type} =~ /^file/) { $spec .= '=s' } # TODO
+    elsif($option->{type} =~ /^dir/) { $spec .= '=s' } # TODO
     else { die 'Usage: option {bool|flag|inc|str|int|num|file|dir} ...' }
 
-    if(my $n_of = $option->{'n_of'}) {
+    if(my $n_of = $option->{n_of}) {
         $spec .= $n_of eq '@' ? $n_of : "{$n_of}";
-        $option->{'default'} and ref $option->{'default'} ne 'ARRAY' and die 'Usage option ... default => [Need to be an array ref]';
-        $option->{'default'} ||= [];
+        $option->{default} and ref $option->{default} ne 'ARRAY' and die 'Usage option ... default => [Need to be an array ref]';
+        $option->{default} ||= [];
     }
 
     return $spec;
@@ -348,8 +348,8 @@ sub _default_options {
 
 sub _generate_application_class {
     my($self, $code) = @_;
-    my $application_class = $self->{'caller'}[1];
-    my $extends = $self->{'extends'} || [];
+    my $application_class = $self->{caller}[1];
+    my $extends = $self->{extends} || [];
     my @required;
 
     $application_class =~ s!\W!_!g;
@@ -378,23 +378,23 @@ sub _generate_application_class {
             return $app->$code(@extra);
         };
 
-        for('app', $self->{'caller'}[0]) {
+        for('app', $self->{caller}[0]) {
             my $ns = \%{"$_\::"};
 
             for my $name (keys %$ns) {
-                $self->{'skip_subs'}{$name} and next;
-                my $code = *{$ns->{$name}}{'CODE'} or next;
+                $self->{skip_subs}{$name} and next;
+                my $code = *{$ns->{$name}}{CODE} or next;
                 my $fqn = join '::', $application_class, $name;
                 __new_sub $fqn => $code;
                 delete $ns->{$name}; # may be a bit too destructive?
             }
         }
 
-        for my $option (@{ $self->{'options'} }) {
-            my $name = $option->{'name'};
-            my $fqn = join '::', $application_class, $option->{'name'};
+        for my $option (@{ $self->{options} }) {
+            my $name = $option->{name};
+            my $fqn = join '::', $application_class, $option->{name};
             __new_sub $fqn => sub { @_ == 2 and $_[0]->{$name} = $_[1]; $_[0]->{$name} };
-            push @required, $name if $option->{'required'};
+            push @required, $name if $option->{required};
         }
     }
 
@@ -411,9 +411,9 @@ Holds the application options given to L</option>.
 
 =cut
 
-sub options { $_[0]->{'options'} }
+sub options { $_[0]->{options} }
 sub _option_parser {
-    $_[0]->{'_option_parser'} ||= do {
+    $_[0]->{_option_parser} ||= do {
         require Getopt::Long;
         Getopt::Long::Parser->new(config => [ qw( no_auto_help no_auto_version pass_through ) ]);
     };
@@ -434,8 +434,8 @@ sub new {
     my($class, $args) = @_;
     my $self = bless $args, $class;
 
-    $self->{'options'} ||= [];
-    $self->{'caller'} or die 'Usage: $self->new({ caller => [...], ... })';
+    $self->{options} ||= [];
+    $self->{caller} or die 'Usage: $self->new({ caller => [...], ... })';
 
     return $self;
 }
@@ -457,7 +457,7 @@ a normalized matter. Example:
 
 sub print_help {
     my $self = shift;
-    my @options = @{ $self->{'options'} };
+    my @options = @{ $self->{options} };
     my $width = 0;
 
     push @options, { name => '' };
@@ -470,7 +470,7 @@ sub print_help {
 
     OPTION:
     for my $option (@options) {
-        my $length = length $option->{'name'};
+        my $length = length $option->{name};
         $width = $length if($width < $length);
     }
 
@@ -478,12 +478,12 @@ sub print_help {
 
     OPTION:
     for my $option (@options) {
-        my $name = $self->_attr_to_option($option->{'name'}) or do { print "\n"; next OPTION };
+        my $name = $self->_attr_to_option($option->{name}) or do { print "\n"; next OPTION };
 
         printf(" %s --%-${width}s  %s\n",
-            $option->{'required'} ? '*' : ' ',
+            $option->{required} ? '*' : ' ',
             $name,
-            $option->{'documentation'},
+            $option->{documentation},
         );
     }
 
@@ -565,7 +565,7 @@ sub import {
     strict->import;
     warnings->import;
 
-    $self->{'skip_subs'} = {
+    $self->{skip_subs} = {
         app => 1,
         option => 1,
         version => 1,
