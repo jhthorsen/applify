@@ -1,6 +1,6 @@
 Revision history for Applify
 
-0.0501
+0.0501   Thu Sep  6 15:53:07 2012
        * Fix major bug: Should be caller(0) and not caller(1) in import().
          This made the perl debugger complain:
          syntax error at my-script.pl line 28, near "documentation __FILE__"
