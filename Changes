@@ -1,5 +1,8 @@
 Revision history for Applify
 
+0.06     Wed Apr 23 14:25:16 2014
+       * Fix "use constant FOO => 123;"
+
 0.0501   Thu Sep  6 15:53:07 2012
        * Fix major bug: Should be caller(0) and not caller(1) in import().
          This made the perl debugger complain:
