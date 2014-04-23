@@ -133,12 +133,12 @@ Usage:
     HELP
 
     is((run_method($script, 'print_version'))[0], <<'    VERSION', 'print_version(numeric)');
-10-basic.t version 1.23
+basic.t version 1.23
     VERSION
 
     $script->version('Applify');
     is((run_method($script, 'print_version'))[0], <<"    VERSION", 'print_version(module)');
-10-basic.t version $Applify::VERSION
+basic.t version $Applify::VERSION
     VERSION
 }
 
