@@ -4,11 +4,11 @@ use lib qw(lib);
 use Test::More;
 use Applify ();
 
-plan skip_all => 'Moose is not available' unless(eval 'use Moose; 1');
+plan skip_all => 'Moose is not available' unless (eval 'use Moose; 1');
 plan tests => 5;
 
 {
-    eval q[
+  eval q[
         package My::Class;
         use Moose;
         has exit_value => (is => 'ro', default => 123);
@@ -18,8 +18,8 @@ plan tests => 5;
         $INC{'My/Class.pm'} = 'MOCK';
     ] or die $@;
 
-    local @ARGV = qw/ --o-foo 42 /;
-    my $app = eval q[
+  local @ARGV = qw/ --o-foo 42 /;
+  my $app = eval q[
         use Applify;
         extends 'My::Class';
         option int => o_foo => 'Some option';
@@ -30,12 +30,12 @@ plan tests => 5;
         };
     ] or die $@;
 
-    $app->run;
+  $app->run;
 
-    can_ok($app, qw/ run o_foo exit_value do_stuff /);
-    is($app->exit_value, 123, 'exit_value == 123');
-    is($app->o_foo, 42, 'o_foo == 42');
-    ok($app->has_o_foo, 'has_o_foo == 1');
-    $app->clear_o_foo;
-    ok(!$app->has_o_foo, 'has_o_foo == 0');
+  can_ok($app, qw/ run o_foo exit_value do_stuff /);
+  is($app->exit_value, 123, 'exit_value == 123');
+  is($app->o_foo,      42,  'o_foo == 42');
+  ok($app->has_o_foo, 'has_o_foo == 1');
+  $app->clear_o_foo;
+  ok(!$app->has_o_foo, 'has_o_foo == 0');
 }

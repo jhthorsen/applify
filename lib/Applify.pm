@@ -16,34 +16,34 @@ are define directly in the script file and not in a module.
 
 =head1 SYNOPSIS
 
-    #!/usr/bin/perl
-    use Applify;
+  #!/usr/bin/perl
+  use Applify;
 
-    option file => input_file => 'File to read from';
-    option dir => output_dir => 'Directory to write files to';
-    option flag => dry_run => 'Use --no-dry-run to actually do something', 1;
+  option file => input_file => 'File to read from';
+  option dir => output_dir => 'Directory to write files to';
+  option flag => dry_run => 'Use --no-dry-run to actually do something', 1;
 
-    documentation __FILE__;
-    version 1.23;
+  documentation __FILE__;
+  version 1.23;
 
-    sub generate_exit_value {
-        return int rand 100;
+  sub generate_exit_value {
+    return int rand 100;
+  }
+
+  app {
+    my($self, @extra) = @_;
+    my $exit_value = 0;
+
+    print "Extra arguments: @extra\n" if(@extra);
+    print "Will read from: ", $self->input_file, "\n";
+    print "Will write files to: ", $self->output_dir, "\n";
+
+    if($self->dry_run) {
+      die 'Will not run script';
     }
 
-    app {
-        my($self, @extra) = @_;
-        my $exit_value = 0;
-
-        print "Extra arguments: @extra\n" if(@extra);
-        print "Will read from: ", $self->input_file, "\n";
-        print "Will write files to: ", $self->output_dir, "\n";
-
-        if($self->dry_run) {
-            die 'Will not run script';
-        }
-
-        return $self->generate_exit_value;
-    };
+    return $self->generate_exit_value;
+  };
 
 =head1 APPLICATION CLASS
 
@@ -87,20 +87,19 @@ use strict;
 use warnings;
 use File::Basename ();
 
-use constant SUB_NAME_IS_AVAILABLE
-    => $INC{'App/FatPacker/Trace.pm'} ? 0 # this will be true when running under "fatpack"
-     : eval 'use Sub::Name; 1'        ? 1
-     :                                  0;
+use constant SUB_NAME_IS_AVAILABLE => $INC{'App/FatPacker/Trace.pm'}
+  ? 0    # this will be true when running under "fatpack"
+  : eval 'use Sub::Name; 1' ? 1 : 0;
 
 our $VERSION = '0.06';
 our $PERLDOC = 'perldoc';
 my $ANON = 1;
 
 sub __new_sub {
-    my($fqn, $code) = @_;
-    no strict 'refs';
-    return if *$fqn{CODE};
-    *$fqn = SUB_NAME_IS_AVAILABLE ? Sub::Name::subname($fqn, $code) : $code;
+  my ($fqn, $code) = @_;
+  no strict 'refs';
+  return if *$fqn{CODE};
+  *$fqn = SUB_NAME_IS_AVAILABLE ? Sub::Name::subname($fqn, $code) : $code;
 }
 
 =head1 EXPORTED FUNCTIONS
@@ -187,29 +186,24 @@ future release.
 =cut
 
 sub option {
-    my $self = shift;
-    my $type = shift or die 'Usage: option $type => ...';
-    my $name = shift or die 'Usage: option $type => $name => ...';
-    my $documentation = shift or die 'Usage: option $type => $name => $documentation, ...';
-    my($default, @args);
+  my $self          = shift;
+  my $type          = shift or die 'Usage: option $type => ...';
+  my $name          = shift or die 'Usage: option $type => $name => ...';
+  my $documentation = shift or die 'Usage: option $type => $name => $documentation, ...';
+  my ($default, @args);
 
-    if(@_ % 2) {
-        $default = shift;
-        @args = @_;
-    }
-    else {
-        @args = @_;
-    }
+  if (@_ % 2) {
+    $default = shift;
+    @args    = @_;
+  }
+  else {
+    @args = @_;
+  }
 
-    push @{ $self->{options} }, {
-        default => $default,
-        @args,
-        type => $type,
-        name => $name,
-        documentation => $documentation,
-    };
+  push @{$self->{options}},
+    {default => $default, @args, type => $type, name => $name, documentation => $documentation,};
 
-    return $self;
+  return $self;
 }
 
 =head2 documentation
@@ -224,9 +218,9 @@ switch to your script.
 =cut
 
 sub documentation {
-    return $_[0]->{documentation} if(@_ == 1);
-    $_[0]->{documentation} = $_[1] or die 'Usage: documentation $file|$module_name;';
-    return $_[0];
+  return $_[0]->{documentation} if @_ == 1;
+  $_[0]->{documentation} = $_[1] or die 'Usage: documentation $file|$module_name;';
+  return $_[0];
 }
 
 =head2 version
@@ -240,9 +234,9 @@ C<--version> switch to your script.
 =cut
 
 sub version {
-    return $_[0]->{version} if(@_ == 1);
-    $_[0]->{version} = $_[1] or die 'Usage: version $module_name|$num;';
-    return $_[0];
+  return $_[0]->{version} if @_ == 1;
+  $_[0]->{version} = $_[1] or die 'Usage: version $module_name|$num;';
+  return $_[0];
 }
 
 =head2 extends
@@ -255,9 +249,9 @@ classes can be L<Moose> based.
 =cut
 
 sub extends {
-    my $self = shift;
-    $self->{extends} = [@_];
-    return $self;
+  my $self = shift;
+  $self->{extends} = [@_];
+  return $self;
 }
 
 =head2 app
@@ -276,129 +270,130 @@ application object in list/scalar context (from L<perlfunc/do>).
 =cut
 
 sub app {
-    my($self, $code) = @_;
-    my $app = {};
-    my $parser = $self->_option_parser;
-    my(@options_spec, $application_class);
+  my ($self, $code) = @_;
+  my $app    = {};
+  my $parser = $self->_option_parser;
+  my (@options_spec, $application_class);
 
-    for my $option (@{ $self->{options} }) {
-        my $switch = $self->_attr_to_option($option->{name});
-        push @options_spec, $self->_calculate_option_spec($option);
-        $app->{$switch} = $option->{default} if(exists $option->{default});
-    }
+  for my $option (@{$self->{options}}) {
+    my $switch = $self->_attr_to_option($option->{name});
+    push @options_spec, $self->_calculate_option_spec($option);
+    $app->{$switch} = $option->{default} if exists $option->{default};
+  }
 
-    unless($parser->getoptions($app, @options_spec, $self->_default_options)) {
-        $self->_exit(1);
-    }
+  unless ($parser->getoptions($app, @options_spec, $self->_default_options)) {
+    $self->_exit(1);
+  }
 
-    if($app->{help}) {
-        $self->print_help;
-        $self->_exit('help');
-    }
-    elsif($app->{man}) {
-        system $PERLDOC => $self->documentation;
-        $self->_exit($? >> 8);
-    }
-    elsif($app->{version}) {
-        $self->print_version;
-        $self->_exit('version');
-    }
+  if ($app->{help}) {
+    $self->print_help;
+    $self->_exit('help');
+  }
+  elsif ($app->{man}) {
+    system $PERLDOC => $self->documentation;
+    $self->_exit($? >> 8);
+  }
+  elsif ($app->{version}) {
+    $self->print_version;
+    $self->_exit('version');
+  }
 
-    $application_class = $self->_generate_application_class($code);
-    $app = $application_class->new({
-                map { my $k = $self->_option_to_attr($_); $k => $app->{$_} } keys %$app,
-            });
+  $application_class = $self->_generate_application_class($code);
+  $app = $application_class->new({map { my $k = $self->_option_to_attr($_); $k => $app->{$_} } keys %$app,});
 
-    return $app if(defined wantarray); # $app = do $script_file;
-    $self->_exit($app->run(@ARGV));
+  return $app if defined wantarray;    # $app = do $script_file;
+  $self->_exit($app->run(@ARGV));
 }
 
 sub _calculate_option_spec {
-    my($self, $option) = @_;
-    my $spec = $self->_attr_to_option($option->{name});
+  my ($self, $option) = @_;
+  my $spec = $self->_attr_to_option($option->{name});
 
-    if($option->{type} =~ /^(?:bool|flag)/i) { $spec .= '!' }
-    elsif($option->{type} =~ /^inc/) { $spec .= '+' }
-    elsif($option->{type} =~ /^str/) { $spec .= '=s' }
-    elsif($option->{type} =~ /^int/i) { $spec .= '=i' }
-    elsif($option->{type} =~ /^num/i) { $spec .= '=f' }
-    elsif($option->{type} =~ /^file/) { $spec .= '=s' } # TODO
-    elsif($option->{type} =~ /^dir/) { $spec .= '=s' } # TODO
-    else { die 'Usage: option {bool|flag|inc|str|int|num|file|dir} ...' }
+  if    ($option->{type} =~ /^(?:bool|flag)/i) { $spec .= '!' }
+  elsif ($option->{type} =~ /^inc/)            { $spec .= '+' }
+  elsif ($option->{type} =~ /^str/)            { $spec .= '=s' }
+  elsif ($option->{type} =~ /^int/i)           { $spec .= '=i' }
+  elsif ($option->{type} =~ /^num/i)           { $spec .= '=f' }
+  elsif ($option->{type} =~ /^file/)           { $spec .= '=s' }    # TODO
+  elsif ($option->{type} =~ /^dir/)            { $spec .= '=s' }    # TODO
+  else                                         { die 'Usage: option {bool|flag|inc|str|int|num|file|dir} ...' }
 
-    if(my $n_of = $option->{n_of}) {
-        $spec .= $n_of eq '@' ? $n_of : "{$n_of}";
-        $option->{default} and ref $option->{default} ne 'ARRAY' and die 'Usage option ... default => [Need to be an array ref]';
-        $option->{default} ||= [];
-    }
+  if (my $n_of = $option->{n_of}) {
+    $spec .= $n_of eq '@' ? $n_of : "{$n_of}";
+    $option->{default}
+      and ref $option->{default} ne 'ARRAY'
+      and die 'Usage option ... default => [Need to be an array ref]';
+    $option->{default} ||= [];
+  }
 
-    return $spec;
+  return $spec;
 }
 
 sub _default_options {
-    my $self = shift;
-    my @default;
+  my $self = shift;
+  my @default;
 
-    push @default, 'help';
-    push @default, 'man'     if $self->documentation;
-    push @default, 'version' if $self->version;
+  push @default, 'help';
+  push @default, 'man' if $self->documentation;
+  push @default, 'version' if $self->version;
 
-    return @default;
+  return @default;
 }
 
 sub _generate_application_class {
-    my($self, $code) = @_;
-    my $application_class = $self->{caller}[1];
-    my $extends = $self->{extends} || [];
-    my @required;
+  my ($self, $code) = @_;
+  my $application_class = $self->{caller}[1];
+  my $extends = $self->{extends} || [];
+  my @required;
 
-    $application_class =~ s!\W!_!g;
-    $application_class = join '::', ref($self), "__ANON__${ANON}__", $application_class;
-    $ANON++;
+  $application_class =~ s!\W!_!g;
+  $application_class = join '::', ref($self), "__ANON__${ANON}__", $application_class;
+  $ANON++;
 
-    eval qq[
+  eval qq[
         package $application_class;
         use base qw/ @$extends /;
         1;
     ] or die "Failed to generate applicatin class: $@";
 
-    {
-        no strict 'refs';
-        __new_sub "$application_class\::new" => sub { my $class = shift; bless shift, $class } unless grep { $_->can('new') } @$extends;
-        __new_sub "$application_class\::_script" => sub { $self };
-        __new_sub "$application_class\::run" => sub {
-            my($app, @extra) = @_;
+  {
+    no strict 'refs';
+    __new_sub "$application_class\::new" => sub { my $class = shift; bless shift, $class }
+      unless grep { $_->can('new') } @$extends;
+    __new_sub "$application_class\::_script" => sub {$self};
+    __new_sub "$application_class\::run" => sub {
+      my ($app, @extra) = @_;
 
-            if(@required = grep { not defined $app->{$_} } @required) {
-                my $required = join ', ', map { '--' .$self->_attr_to_option($_) } @required;
-                $app->_script->print_help;
-                die "Required attribute missing: $required\n";
-            }
+      if (@required = grep { not defined $app->{$_} } @required) {
+        my $required = join ', ', map { '--' . $self->_attr_to_option($_) } @required;
+        $app->_script->print_help;
+        die "Required attribute missing: $required\n";
+      }
 
-            return $app->$code(@extra);
-        };
+      return $app->$code(@extra);
+    };
 
-        for('app', $self->{caller}[0]) {
-            my $ns = \%{"$_\::"};
+    for ('app', $self->{caller}[0]) {
+      my $ns = \%{"$_\::"};
 
-            for my $name (keys %$ns) {
-                $self->{skip_subs}{$name} and next;
-                my $code = eval { *{$ns->{$name}}{CODE} } or next;
-                my $fqn = join '::', $application_class, $name;
-                __new_sub $fqn => $code;
-                delete $ns->{$name}; # may be a bit too destructive?
-            }
-        }
-
-        for my $option (@{ $self->{options} }) {
-            my $name = $option->{name};
-            my $fqn = join '::', $application_class, $option->{name};
-            __new_sub $fqn => sub { @_ == 2 and $_[0]->{$name} = $_[1]; $_[0]->{$name} };
-            push @required, $name if $option->{required};
-        }
+      for my $name (keys %$ns) {
+        $self->{skip_subs}{$name} and next;
+        my $code = eval { *{$ns->{$name}}{CODE} } or next;
+        my $fqn = join '::', $application_class, $name;
+        __new_sub $fqn => $code;
+        delete $ns->{$name};    # may be a bit too destructive?
+      }
     }
 
-    return $application_class;
+    for my $option (@{$self->{options}}) {
+      my $name = $option->{name};
+      my $fqn = join '::', $application_class, $option->{name};
+      __new_sub $fqn => sub { @_ == 2 and $_[0]->{$name} = $_[1]; $_[0]->{$name} };
+      push @required, $name if $option->{required};
+    }
+  }
+
+  return $application_class;
 }
 
 =head1 ATTRIBUTES
@@ -412,11 +407,12 @@ Holds the application options given to L</option>.
 =cut
 
 sub options { $_[0]->{options} }
+
 sub _option_parser {
-    $_[0]->{_option_parser} ||= do {
-        require Getopt::Long;
-        Getopt::Long::Parser->new(config => [ qw( no_auto_help no_auto_version pass_through ) ]);
-    };
+  $_[0]->{_option_parser} ||= do {
+    require Getopt::Long;
+    Getopt::Long::Parser->new(config => [qw( no_auto_help no_auto_version pass_through )]);
+  };
 }
 
 =head1 METHODS
@@ -431,13 +427,13 @@ information.
 =cut
 
 sub new {
-    my($class, $args) = @_;
-    my $self = bless $args, $class;
+  my ($class, $args) = @_;
+  my $self = bless $args, $class;
 
-    $self->{options} ||= [];
-    $self->{caller} or die 'Usage: $self->new({ caller => [...], ... })';
+  $self->{options} ||= [];
+  $self->{caller} or die 'Usage: $self->new({ caller => [...], ... })';
 
-    return $self;
+  return $self;
 }
 
 =head2 print_help
@@ -456,58 +452,54 @@ a normalized matter. Example:
 =cut
 
 sub print_help {
-    my $self = shift;
-    my @options = @{ $self->{options} };
-    my $width = 0;
+  my $self    = shift;
+  my @options = @{$self->{options}};
+  my $width   = 0;
 
-    push @options, { name => '' };
-    push @options, { name => 'help', documentation => 'Print this help text' };
-    push @options, { name => 'man', documentation => 'Display manual for this application' } if($self->documentation);
-    push @options, { name => 'version', documentation => 'Print application name and version' } if($self->version);
-    push @options, { name => '' };
+  push @options, {name => ''};
+  push @options, {name => 'help', documentation => 'Print this help text'};
+  push @options, {name => 'man', documentation => 'Display manual for this application'} if $self->documentation;
+  push @options, {name => 'version', documentation => 'Print application name and version'} if $self->version;
+  push @options, {name => ''};
 
-    $self->_print_synopsis;
+  $self->_print_synopsis;
 
-    OPTION:
-    for my $option (@options) {
-        my $length = length $option->{name};
-        $width = $length if($width < $length);
-    }
+OPTION:
+  for my $option (@options) {
+    my $length = length $option->{name};
+    $width = $length if $width < $length;
+  }
 
-    print "Usage:\n";
+  print "Usage:\n";
 
-    OPTION:
-    for my $option (@options) {
-        my $name = $self->_attr_to_option($option->{name}) or do { print "\n"; next OPTION };
+OPTION:
+  for my $option (@options) {
+    my $name = $self->_attr_to_option($option->{name}) or do { print "\n"; next OPTION };
 
-        printf(" %s --%-${width}s  %s\n",
-            $option->{required} ? '*' : ' ',
-            $name,
-            $option->{documentation},
-        );
-    }
+    printf(" %s --%-${width}s  %s\n", $option->{required} ? '*' : ' ', $name, $option->{documentation},);
+  }
 
-    return $self;
+  return $self;
 }
 
 sub _print_synopsis {
-    my $self = shift;
-    my $documentation = $self->documentation or return;
-    my $print;
+  my $self = shift;
+  my $documentation = $self->documentation or return;
+  my $print;
 
-    unless(-e $documentation) {
-        eval "use $documentation; 1" or die "Could not load $documentation: $@";
-        $documentation =~ s!::!/!g;
-        $documentation = $INC{"$documentation.pm"};
-    }
+  unless (-e $documentation) {
+    eval "use $documentation; 1" or die "Could not load $documentation: $@";
+    $documentation =~ s!::!/!g;
+    $documentation = $INC{"$documentation.pm"};
+  }
 
-    open my $FH, '<', $documentation or die "Failed to read synopsis from $documentation: $@";
+  open my $FH, '<', $documentation or die "Failed to read synopsis from $documentation: $@";
 
-    while(<$FH>) {
-        last if($print and /^=(?:cut|head1)/);
-        print if($print);
-        $print = 1 if(/^=head1 SYNOPSIS/);
-    }
+  while (<$FH>) {
+    last if $print and /^=(?:cut|head1)/;
+    print if $print;
+    $print = 1 if /^=head1 SYNOPSIS/;
+  }
 }
 
 =head2 print_version
@@ -520,33 +512,33 @@ a normalized matter. Example:
 =cut
 
 sub print_version {
-    my $self = shift;
-    my $version = $self->version or die 'Cannot print version without version()';
+  my $self = shift;
+  my $version = $self->version or die 'Cannot print version without version()';
 
-    unless($version =~ m!^\d!) {
-        eval "require $version; 1" or die "Could not load $version: $@";
-        $version = $version->VERSION;
-    }
+  unless ($version =~ m!^\d!) {
+    eval "require $version; 1" or die "Could not load $version: $@";
+    $version = $version->VERSION;
+  }
 
-    printf "%s version %s\n", File::Basename::basename($0), $version;
+  printf "%s version %s\n", File::Basename::basename($0), $version;
 }
 
 sub _exit {
-    my($self, $reason) = @_;
-    exit 0 unless($reason =~ /^\d+$/); # may change without warning...
-    exit $reason;
+  my ($self, $reason) = @_;
+  exit 0 unless ($reason =~ /^\d+$/);    # may change without warning...
+  exit $reason;
 }
 
 sub _attr_to_option {
-    local $_ = $_[1] or return;
-    s!_!-!g;
-    $_;
+  local $_ = $_[1] or return;
+  s!_!-!g;
+  $_;
 }
 
 sub _option_to_attr {
-    local $_ = $_[1] or return;
-    s!-!_!g;
-    $_;
+  local $_ = $_[1] or return;
+  s!-!_!g;
+  $_;
 }
 
 =head2 import
@@ -557,33 +549,27 @@ will act on a L<Applify> object created by this method.
 =cut
 
 sub import {
-    my $class = shift;
-    my @caller = caller;
-    my $self = $class->new({ caller => \@caller });
-    my $ns = $caller[0] .'::';
+  my $class  = shift;
+  my @caller = caller;
+  my $self   = $class->new({caller => \@caller});
+  my $ns     = $caller[0] . '::';
 
-    strict->import;
-    warnings->import;
+  strict->import;
+  warnings->import;
 
-    $self->{skip_subs} = {
-        app => 1,
-        option => 1,
-        version => 1,
-        documentation => 1,
-        extends => 1,
-    };
+  $self->{skip_subs} = {app => 1, option => 1, version => 1, documentation => 1, extends => 1,};
 
-    no strict 'refs';
-    for my $name (keys %$ns) {
-        $self->{'skip_subs'}{$name} = 1;
-    }
+  no strict 'refs';
+  for my $name (keys %$ns) {
+    $self->{'skip_subs'}{$name} = 1;
+  }
 
-    no warnings 'redefine'; # need to allow redefine when loading a new app
-    *{"$caller[0]\::app"} = sub (&) { $self->app(@_) };
-    *{"$caller[0]\::option"} = sub { $self->option(@_) };
-    *{"$caller[0]\::version"} = sub { $self->version(@_) };
-    *{"$caller[0]\::documentation"} = sub { $self->documentation(@_) };
-    *{"$caller[0]\::extends"} = sub { $self->extends(@_) };
+  no warnings 'redefine';    # need to allow redefine when loading a new app
+  *{"$caller[0]\::app"}           = sub (&) { $self->app(@_) };
+  *{"$caller[0]\::option"}        = sub     { $self->option(@_) };
+  *{"$caller[0]\::version"}       = sub     { $self->version(@_) };
+  *{"$caller[0]\::documentation"} = sub     { $self->documentation(@_) };
+  *{"$caller[0]\::extends"}       = sub     { $self->extends(@_) };
 }
 
 =head1 COPYRIGHT & LICENSE
