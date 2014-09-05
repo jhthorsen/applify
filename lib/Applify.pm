@@ -384,8 +384,7 @@ sub _generate_application_class {
       }
     }
 
-    $meta = $application_class->meta if $application_class->can('meta');
-    $meta = undef unless UNIVERSAL::can($meta, 'add_attribute');
+    $meta = $application_class->meta if $application_class->isa('Moose::Object') and $application_class->can('meta');
 
     for my $option (@{$self->{options}}) {
       my $name = $option->{name};

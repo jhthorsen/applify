@@ -8,14 +8,17 @@ plan tests => 52;
 
 {
   my $app = eval q[
-      package main;
-        sub not_app_method { 1 }
-        use Applify;
-        sub app::foo { 1 }
-        sub bar { 1 }
-        sub AUTOLOAD { 'Autoloaded' }
-        app { 0 };
-    ] or BAIL_OUT $@;
+    package BaseClass;
+    sub meta { 'i am not moose' }
+    package main;
+    sub not_app_method { 1 }
+    use Applify;
+    sub app::foo { 1 }
+    sub bar { 1 }
+    sub AUTOLOAD { 'Autoloaded' }
+    extends 'BaseClass';
+    app { 0 };
+  ] or BAIL_OUT $@;
 
   my $script = $app->_script;
 
