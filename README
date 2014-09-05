@@ -2,7 +2,7 @@ NAME
     Applify - Write object oriented scripts with ease
 
 VERSION
-    0.06
+    0.07
 
 DESCRIPTION
     This module should keep all the noise away and let you write scripts
@@ -10,34 +10,34 @@ DESCRIPTION
     define directly in the script file and not in a module.
 
 SYNOPSIS
-        #!/usr/bin/perl
-        use Applify;
+      #!/usr/bin/perl
+      use Applify;
 
-        option file => input_file => 'File to read from';
-        option dir => output_dir => 'Directory to write files to';
-        option flag => dry_run => 'Use --no-dry-run to actually do something', 1;
+      option file => input_file => 'File to read from';
+      option dir => output_dir => 'Directory to write files to';
+      option flag => dry_run => 'Use --no-dry-run to actually do something', 1;
 
-        documentation __FILE__;
-        version 1.23;
+      documentation __FILE__;
+      version 1.23;
 
-        sub generate_exit_value {
-            return int rand 100;
+      sub generate_exit_value {
+        return int rand 100;
+      }
+
+      app {
+        my($self, @extra) = @_;
+        my $exit_value = 0;
+
+        print "Extra arguments: @extra\n" if(@extra);
+        print "Will read from: ", $self->input_file, "\n";
+        print "Will write files to: ", $self->output_dir, "\n";
+
+        if($self->dry_run) {
+          die 'Will not run script';
         }
 
-        app {
-            my($self, @extra) = @_;
-            my $exit_value = 0;
-
-            print "Extra arguments: @extra\n" if(@extra);
-            print "Will read from: ", $self->input_file, "\n";
-            print "Will write files to: ", $self->output_dir, "\n";
-
-            if($self->dry_run) {
-                die 'Will not run script';
-            }
-
-            return $self->generate_exit_value;
-        };
+        return $self->generate_exit_value;
+      };
 
 APPLICATION CLASS
     This module will generate an application class, which $self inside the

@@ -3,6 +3,7 @@
 /blib/
 /inc/
 /pm_to_blib
+/MANIFEST
 /Makefile
 /Makefile.old
 *swp
