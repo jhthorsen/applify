@@ -1,6 +1,6 @@
 Revision history for Applify
 
-0.08
+0.08     Fri Sep  5 16:55:03 2014
        * Will not call meta() unless the class extends Moose::Object
 
 0.07     Fri Sep  5 14:36:58 2014
