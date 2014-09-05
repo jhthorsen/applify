@@ -271,35 +271,34 @@ application object in list/scalar context (from L<perlfunc/do>).
 
 sub app {
   my ($self, $code) = @_;
-  my $app    = {};
   my $parser = $self->_option_parser;
-  my (@options_spec, $application_class);
+  my (%options, @options_spec, $application_class, $app);
 
   for my $option (@{$self->{options}}) {
     my $switch = $self->_attr_to_option($option->{name});
     push @options_spec, $self->_calculate_option_spec($option);
-    $app->{$switch} = $option->{default} if exists $option->{default};
+    $options{$switch} = $option->{default} if exists $option->{default};
   }
 
-  unless ($parser->getoptions($app, @options_spec, $self->_default_options)) {
+  unless ($parser->getoptions(\%options, @options_spec, $self->_default_options)) {
     $self->_exit(1);
   }
 
-  if ($app->{help}) {
+  if ($options{help}) {
     $self->print_help;
     $self->_exit('help');
   }
-  elsif ($app->{man}) {
+  elsif ($options{man}) {
     system $PERLDOC => $self->documentation;
     $self->_exit($? >> 8);
   }
-  elsif ($app->{version}) {
+  elsif ($options{version}) {
     $self->print_version;
     $self->_exit('version');
   }
 
   $application_class = $self->_generate_application_class($code);
-  $app = $application_class->new({map { my $k = $self->_option_to_attr($_); $k => $app->{$_} } keys %$app,});
+  $app = $application_class->new({map { my $k = $self->_option_to_attr($_); $k => $options{$_} } keys %options});
 
   return $app if defined wantarray;    # $app = do $script_file;
   $self->_exit($app->run(@ARGV));
@@ -344,17 +343,17 @@ sub _generate_application_class {
   my ($self, $code) = @_;
   my $application_class = $self->{caller}[1];
   my $extends = $self->{extends} || [];
-  my @required;
+  my ($meta, @required);
 
   $application_class =~ s!\W!_!g;
   $application_class = join '::', ref($self), "__ANON__${ANON}__", $application_class;
   $ANON++;
 
   eval qq[
-        package $application_class;
-        use base qw/ @$extends /;
-        1;
-    ] or die "Failed to generate applicatin class: $@";
+    package $application_class;
+    use base qw/ @$extends /;
+    1;
+  ] or die "Failed to generate applicatin class: $@";
 
   {
     no strict 'refs';
@@ -385,10 +384,18 @@ sub _generate_application_class {
       }
     }
 
+    $meta = $application_class->meta if $application_class->can('meta');
+    $meta = undef unless UNIVERSAL::can($meta, 'add_attribute');
+
     for my $option (@{$self->{options}}) {
       my $name = $option->{name};
       my $fqn = join '::', $application_class, $option->{name};
-      __new_sub $fqn => sub { @_ == 2 and $_[0]->{$name} = $_[1]; $_[0]->{$name} };
+      if ($meta) {
+        $meta->add_attribute($name => {is => 'rw', default => $option->{default}});
+      }
+      else {
+        __new_sub $fqn => sub { @_ == 2 and $_[0]->{$name} = $_[1]; $_[0]->{$name} };
+      }
       push @required, $name if $option->{required};
     }
   }
