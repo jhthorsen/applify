@@ -1,5 +1,8 @@
 Revision history for Applify
 
+0.09
+       * Fix failig test in blead perl 5.21.4 #1
+
 0.08     Fri Sep  5 16:55:03 2014
        * Will not call meta() unless the class extends Moose::Object
 
