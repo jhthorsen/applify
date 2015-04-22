@@ -2,7 +2,8 @@
 use lib 'lib';
 use Applify;
 
-option str => iiiiiii => 'asd';
+option str  => iiiiiii    => 'asd';
+option str  => x          => 'asd';
 option file => input_file => 'File to read from', 'Makefile.PL', alias => 'i';
 option str => output_dir => 'Directory to write files to', n_of => '0,2';
 option flag => dry_run => 'Use --no-dry-run to actually do something', required => 1;

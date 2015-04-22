@@ -490,7 +490,12 @@ OPTION:
   for my $option (@options) {
     my $name = $self->_attr_to_option($option->{name}) or do { print "\n"; next OPTION };
 
-    printf(" %s --%-${width}s  %s\n", $option->{required} ? '*' : ' ', $name, $option->{documentation},);
+    printf(
+      " %s %2s%-${width}s  %s\n",
+      $option->{required} ? '*'  : ' ',
+      length($name) > 1   ? '--' : '-',
+      $name, $option->{documentation},
+    );
   }
 
   return $self;
