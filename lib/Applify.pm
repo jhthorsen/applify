@@ -190,18 +190,21 @@ sub option {
   my $type          = shift or die 'Usage: option $type => ...';
   my $name          = shift or die 'Usage: option $type => $name => ...';
   my $documentation = shift or die 'Usage: option $type => $name => $documentation, ...';
-  my ($default, @args);
+  my ($default, %args);
 
   if (@_ % 2) {
     $default = shift;
-    @args    = @_;
+    %args    = @_;
   }
   else {
-    @args = @_;
+    %args = @_;
   }
 
-  push @{$self->{options}},
-    {default => $default, @args, type => $type, name => $name, documentation => $documentation,};
+  if ($args{alias} and !ref $args{alias}) {
+    $args{alias} = [$args{alias}];
+  }
+
+  push @{$self->{options}}, {default => $default, %args, type => $type, name => $name, documentation => $documentation};
 
   return $self;
 }
@@ -270,7 +273,8 @@ application object in list/scalar context (from L<perlfunc/do>).
 =cut
 
 sub app {
-  my ($self, $code) = @_;
+  my $self   = shift;
+  my $code   = $self->{app} ||= shift;
   my $parser = $self->_option_parser;
   my (%options, @options_spec, $application_class, $app);
 
@@ -307,6 +311,10 @@ sub app {
 sub _calculate_option_spec {
   my ($self, $option) = @_;
   my $spec = $self->_attr_to_option($option->{name});
+
+  if (ref $option->{alias} eq 'ARRAY') {
+    $spec .= join '|', '', @{$option->{alias}};
+  }
 
   if    ($option->{type} =~ /^(?:bool|flag)/i) { $spec .= '!' }
   elsif ($option->{type} =~ /^inc/)            { $spec .= '+' }
@@ -388,7 +396,7 @@ sub _generate_application_class {
 
     for my $option (@{$self->{options}}) {
       my $name = $option->{name};
-      my $fqn = join '::', $application_class, $option->{name};
+      my $fqn = join '::', $application_class, $name;
       if ($meta) {
         $meta->add_attribute($name => {is => 'rw', default => $option->{default}});
       }

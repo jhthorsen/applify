@@ -1,5 +1,8 @@
 Revision history for perl distribution Applify
 
+0.10 Not Released
+ - Add support for option(..., alias => [...])
+
 0.09 2014-09-28T22:03:06Z
  - Fix failig test in blead perl 5.21.4 #1
 
