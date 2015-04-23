@@ -301,7 +301,7 @@ sub app {
     $self->_exit('version');
   }
 
-  $application_class = $self->_generate_application_class($code);
+  $application_class = $self->{application_class} ||= $self->_generate_application_class($code);
   $app = $application_class->new({map { my $k = $self->_option_to_attr($_); $k => $options{$_} } keys %options});
 
   return $app if defined wantarray;    # $app = do $script_file;
