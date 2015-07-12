@@ -15,6 +15,6 @@ WriteMakefile(
     },
   },
   BUILD_REQUIRES => {'Test::More' => '0.88'},
-  PREREQ_PM      => {'Cwd'        => '0', 'File::Basename' => '0', 'Getopt::Long' => '0'},
-  test           => {TESTS        => 't/*.t'},
+  PREREQ_PM      => {'Cwd'        => '0', 'File::Basename' => '0', 'Getopt::Long' => '0', 'perl' => '5.010001'},
+  test => {TESTS => (-e 'META.yml' ? 't/*.t' : 't/*.t xt/*.t')},
 );

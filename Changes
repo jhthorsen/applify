@@ -1,6 +1,6 @@
 Revision history for perl distribution Applify
 
-0.11 Not Released
+0.11 2015-07-12T11:32:22+0200
  - Bump minimum required Perl version to 5.10.1
  - AUTOLOAD does not work on Perl 5.10.1
 
