@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More;
 
-plan skip_all => 'AUTOLOAD does not work on 5.10.1' unless eval 'require 5.12.0;1';
+plan skip_all => 'Skipped on 5.10.1' unless eval 'require 5.12.0;1';
 
 my $app = eval <<"HERE" or die $@;
 package main;

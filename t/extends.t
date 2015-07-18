@@ -1,12 +1,11 @@
 use warnings;
 use strict;
+use Test::More;
+
+plan skip_all => 'Skipped on 5.10.1' unless eval 'require 5.12.0;1';
 
 package BaseClass;
 sub meta {'i am not moose'}
-
-# Sub::Name does something strange on 5.10.1
-# which cause this test to die on cleanup
-$INC{'App/FatPacker/Trace.pm'} = __FILE__;
 
 my $app = eval <<"HERE" or die $@;
 package main;
@@ -19,8 +18,7 @@ extends 'BaseClass';
 app { 0 };
 HERE
 
-package Test;
-use Test::More;
+package main;
 my $script = $app->_script;
 
 ok !app->can('foo'),              'foo() was removed from app:: namespace';
