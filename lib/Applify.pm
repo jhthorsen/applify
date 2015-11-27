@@ -568,10 +568,11 @@ will act on a L<Applify> object created by this method.
 =cut
 
 sub import {
-  my $class  = shift;
+  my ($class, %args) = @_;
   my @caller = caller;
   my $self   = $class->new({caller => \@caller});
   my $ns     = $caller[0] . '::';
+  my %export;
 
   strict->import;
   warnings->import;
@@ -583,12 +584,18 @@ sub import {
     $self->{'skip_subs'}{$name} = 1;
   }
 
+  for my $k (qw( app extends option version documentation )) {
+    my $name = $args{$k} // $k;
+    next unless $name;
+    $export{$k} = $name =~ /::/ ? $name : "$caller[0]\::$name";
+  }
+
   no warnings 'redefine';    # need to allow redefine when loading a new app
-  *{"$caller[0]\::app"}           = sub (&) { $self->app(@_) };
-  *{"$caller[0]\::option"}        = sub     { $self->option(@_) };
-  *{"$caller[0]\::version"}       = sub     { $self->version(@_) };
-  *{"$caller[0]\::documentation"} = sub     { $self->documentation(@_) };
-  *{"$caller[0]\::extends"}       = sub     { $self->extends(@_) };
+  *{$export{app}}           = sub (&) { $self->app(@_) };
+  *{$export{option}}        = sub     { $self->option(@_) };
+  *{$export{version}}       = sub     { $self->version(@_) };
+  *{$export{documentation}} = sub     { $self->documentation(@_) };
+  *{$export{extends}}       = sub     { $self->extends(@_) };
 }
 
 =head1 COPYRIGHT & LICENSE

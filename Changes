@@ -1,5 +1,8 @@
 Revision history for perl distribution Applify
 
+0.13 Not Released
+ - Allow changing names of the exported functions
+
 0.12 2015-07-18T08:55:27+0200
  - t/extends.t does not work on Perl 5.10.1
 
