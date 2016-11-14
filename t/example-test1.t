@@ -1,3 +1,4 @@
+use lib '.';
 use t::Helper;
 
 my $app    = do 'example/test1.pl';
