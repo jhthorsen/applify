@@ -302,10 +302,34 @@ sub app {
   }
 
   $application_class = $self->{application_class} ||= $self->_generate_application_class($code);
-  $app = $application_class->new({map { my $k = $self->_option_to_attr($_); $k => $options{$_} } keys %options});
+  $app = $application_class->new(
+    {map { my $k = $self->_option_to_attr($_); $k => $self->_upgrade($k, $options{$_}) } keys %options});
 
   return $app if defined wantarray;    # $app = do $script_file;
   $self->_exit($app->run(@ARGV));
+}
+
+sub __load_class {
+  my $class = shift;
+  return eval "require $class; 1" ? 1 : 0;
+}
+
+sub _upgrade {
+  my ($self, $name, $input) = @_;
+  my $upgraded = $input;
+  if (defined $input) {
+    my ($option) = grep { $_->{name} =~ /^$name$/ } @{$self->{options}};
+    my $class;
+    if ($option->{type} =~ /^(file|dir)/ and $class = $option->{class} and __load_class($class)) {
+      if (ref($input) eq 'ARRAY') {
+        $upgraded = [map { $class->new($_) } @$input];
+      }
+      else {
+        $upgraded = $class->new($input);
+      }
+    }
+  }
+  return $upgraded;
 }
 
 sub _calculate_option_spec {
@@ -330,7 +354,7 @@ sub _calculate_option_spec {
     $option->{default}
       and ref $option->{default} ne 'ARRAY'
       and die 'Usage option ... default => [Need to be an array ref]';
-    $option->{default} ||= [];
+    $option->{default} = [];
   }
 
   return $spec;
