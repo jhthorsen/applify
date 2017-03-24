@@ -311,6 +311,7 @@ sub app {
 
 sub __load_class {
   my $class = shift;
+  return 1 if $class->can('new');
   return eval "require $class; 1" ? 1 : 0;
 }
 
