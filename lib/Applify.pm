@@ -174,6 +174,10 @@ The script will not start if a required field is omitted.
 Allow the option to hold a list of values. Examples: "@", "4", "1,3".
 See L<Getopt::Long/Options-with-multiple-values> for details.
 
+=item * C<class>
+
+Specify the class a "file" or "dir" type option should be instantiated as.
+
 =item * Other
 
 Any other L<Moose> attribute argument may/will be supported in

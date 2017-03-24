@@ -16,6 +16,8 @@ option dir => directory => 'dir', class => 'TestApp::File';
 option file => config_file => 'configuration', class => 'TestApp::File';
 option file => file_list => 'files to process', n_of => '\@', class => 'TestApp::File';
 option file => output => 'output file', default => 'example/output.txt', class => 'TestApp::File';
+option file => path_string => 'path as a string only';
+option file => failsafe => 'path as a string only - spurious class', class => 'Not::Existing';
 option str => check => 'simple';
 app {};
 HERE
@@ -23,11 +25,13 @@ HERE
 my $script = $app->_script;
 
 {
-  local @ARGV = ('--directory', '.');
+  local @ARGV = ('--directory', '.', '--path', 'bin', '--failsafe', '/tmp');
   my $app = $script->app;
   isa_ok $app->directory, 'TestApp::File', 'directory option';
   isa_ok $app->output, 'TestApp::File', 'default';
   is $app->output, 'example/output.txt', 'output file default';
+  is ref($app->path_string), '', 'path is a string not one of those objects';
+  is ref($app->failsafe), '', 'failsafe is a string not one of those objects';
 }
 
 {
