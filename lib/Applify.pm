@@ -174,7 +174,7 @@ The script will not start if a required field is omitted.
 Allow the option to hold a list of values. Examples: "@", "4", "1,3".
 See L<Getopt::Long/Options-with-multiple-values> for details.
 
-=item * C<class>
+=item * C<isa>
 
 Specify the class a "file" or "dir" type option should be instantiated as.
 
@@ -286,6 +286,7 @@ sub app {
     my $switch = $self->_attr_to_option($option->{name});
     push @options_spec, $self->_calculate_option_spec($option);
     $options{$switch} = $option->{default} if exists $option->{default};
+    $options{$switch} = [ @{$options{$switch}} ] if ref($options{$switch}) eq 'ARRAY';
   }
 
   unless ($parser->getoptions(\%options, @options_spec, $self->_default_options)) {
@@ -325,7 +326,7 @@ sub _upgrade {
   if (defined $input) {
     my ($option) = grep { $_->{name} =~ /^$name$/ } @{$self->{options}};
     my $class;
-    if ($option->{type} =~ /^(file|dir)/ and $class = $option->{class} and __load_class($class)) {
+    if ($option->{type} =~ /^(file|dir)/ and $class = $option->{isa} and __load_class($class)) {
       if (ref($input) eq 'ARRAY') {
         $upgraded = [map { $class->new($_) } @$input];
       }
@@ -359,7 +360,7 @@ sub _calculate_option_spec {
     $option->{default}
       and ref $option->{default} ne 'ARRAY'
       and die 'Usage option ... default => [Need to be an array ref]';
-    $option->{default} = [];
+    $option->{default} ||= [];
   }
 
   return $spec;

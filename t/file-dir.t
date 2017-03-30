@@ -12,12 +12,12 @@ use Test::More;
 my $app = eval <<"HERE" or die $@;
 package TestApp;
 use Applify;
-option dir => directory => 'dir', class => 'TestApp::File';
-option file => config_file => 'configuration', class => 'TestApp::File';
-option file => file_list => 'files to process', n_of => '\@', class => 'TestApp::File';
-option file => output => 'output file', default => 'example/output.txt', class => 'TestApp::File';
+option dir => directory => 'dir', isa => 'TestApp::File';
+option file => config_file => 'configuration', isa => 'TestApp::File';
+option file => file_list => 'files to process', n_of => '\@', isa => 'TestApp::File';
+option file => output => 'output file', default => 'example/output.txt', isa => 'TestApp::File';
 option file => path_string => 'path as a string only';
-option file => failsafe => 'path as a string only - spurious class', class => 'Not::Existing';
+option file => failsafe => 'path as a string only - spurious class', isa => 'Not::Existing';
 option str => check => 'simple';
 app {};
 HERE
