@@ -322,20 +322,19 @@ sub __load_class {
 
 sub _upgrade {
   my ($self, $name, $input) = @_;
-  my $upgraded = $input;
   if (defined $input) {
     my ($option) = grep { $_->{name} =~ /^$name$/ } @{$self->{options}};
     my $class;
     if ($option->{type} =~ /^(file|dir)/ and $class = $option->{isa} and __load_class($class)) {
       if (ref($input) eq 'ARRAY') {
-        $upgraded = [map { $class->new($_) } @$input];
+        $input = [map { $class->new($_) } @$input];
       }
       else {
-        $upgraded = $class->new($input);
+        $input = $class->new("$input");
       }
     }
   }
-  return $upgraded;
+  return $input;
 }
 
 sub _calculate_option_spec {
