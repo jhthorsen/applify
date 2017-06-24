@@ -612,8 +612,10 @@ will act on a L<Applify> object created by this method.
 This library is free software. You can redistribute it and/or modify
 it under the same terms as Perl itself.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Jan Henning Thorsen
+Jan Henning Thorsen - C<jhthorsen@cpan.org>
+
+Roy Storey
 
 =cut
