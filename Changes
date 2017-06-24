@@ -1,6 +1,6 @@
 Revision history for perl distribution Applify
 
-0.13 Not Released
+0.13 2017-06-24T09:34:05+0200
  - Allow changing names of the exported functions
  - Add "isa" to option, which upgrades a plain value into an object
    Contributor: Roy Storey
