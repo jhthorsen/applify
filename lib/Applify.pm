@@ -174,6 +174,10 @@ The script will not start if a required field is omitted.
 Allow the option to hold a list of values. Examples: "@", "4", "1,3".
 See L<Getopt::Long/Options-with-multiple-values> for details.
 
+=item * C<isa>
+
+Specify the class a "file" or "dir" type option should be instantiated as.
+
 =item * Other
 
 Any other L<Moose> attribute argument may/will be supported in
@@ -282,6 +286,7 @@ sub app {
     my $switch = $self->_attr_to_option($option->{name});
     push @options_spec, $self->_calculate_option_spec($option);
     $options{$switch} = $option->{default} if exists $option->{default};
+    $options{$switch} = [ @{$options{$switch}} ] if ref($options{$switch}) eq 'ARRAY';
   }
 
   unless ($parser->getoptions(\%options, @options_spec, $self->_default_options)) {
@@ -302,10 +307,34 @@ sub app {
   }
 
   $application_class = $self->{application_class} ||= $self->_generate_application_class($code);
-  $app = $application_class->new({map { my $k = $self->_option_to_attr($_); $k => $options{$_} } keys %options});
+  $app = $application_class->new(
+    {map { my $k = $self->_option_to_attr($_); $k => $self->_upgrade($k, $options{$_}) } keys %options});
 
   return $app if defined wantarray;    # $app = do $script_file;
   $self->_exit($app->run(@ARGV));
+}
+
+sub __load_class {
+  my $class = shift;
+  return 1 if $class->can('new');
+  return eval "require $class; 1" ? 1 : 0;
+}
+
+sub _upgrade {
+  my ($self, $name, $input) = @_;
+  if (defined $input) {
+    my ($option) = grep { $_->{name} =~ /^$name$/ } @{$self->{options}};
+    my $class;
+    if ($option->{type} =~ /^(file|dir)/ and $class = $option->{isa} and __load_class($class)) {
+      if (ref($input) eq 'ARRAY') {
+        $input = [map { $class->new($_) } @$input];
+      }
+      else {
+        $input = $class->new("$input");
+      }
+    }
+  }
+  return $input;
 }
 
 sub _calculate_option_spec {
