@@ -78,7 +78,7 @@ sub import {
     $self->{'skip_subs'}{$name} = 1;
   }
 
-  for my $k (qw( app extends option version documentation )) {
+  for my $k (qw(app extends option version documentation)) {
     my $name = $args{$k} // $k;
     next unless $name;
     $export{$k} = $name =~ /::/ ? $name : "$caller[0]\::$name";
@@ -245,7 +245,7 @@ sub _generate_application_class {
 
   eval qq[
     package $application_class;
-    use base qw/ @$extends /;
+    use base qw(@$extends);
     1;
   ] or die "Failed to generate applicatin class: $@";
 
@@ -307,7 +307,7 @@ sub _load_class {
 sub _option_parser {
   $_[0]->{_option_parser} ||= do {
     require Getopt::Long;
-    Getopt::Long::Parser->new(config => [qw( no_auto_help no_auto_version pass_through )]);
+    Getopt::Long::Parser->new(config => [qw(no_auto_help no_auto_version pass_through)]);
   };
 }
 
