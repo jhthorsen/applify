@@ -176,7 +176,12 @@ See L<Getopt::Long/Options-with-multiple-values> for details.
 
 =item * C<isa>
 
-Specify the class a "file" or "dir" type option should be instantiated as.
+Specify the class an option should be instantiated as. Example:
+
+  option file => output => "output file", isa => "Mojo::File";
+
+The C<output()> attribute will then later return an object of L<Mojo::File>,
+instead of just a plain string.
 
 =item * Other
 
@@ -285,8 +290,8 @@ sub app {
   for my $option (@{$self->{options}}) {
     my $switch = $self->_attr_to_option($option->{name});
     push @options_spec, $self->_calculate_option_spec($option);
-    $options{$switch} = $option->{default} if exists $option->{default};
-    $options{$switch} = [ @{$options{$switch}} ] if ref($options{$switch}) eq 'ARRAY';
+    $options{$switch} = $option->{default}     if exists $option->{default};
+    $options{$switch} = [@{$options{$switch}}] if ref($options{$switch}) eq 'ARRAY';
   }
 
   unless ($parser->getoptions(\%options, @options_spec, $self->_default_options)) {
@@ -315,26 +320,18 @@ sub app {
 }
 
 sub __load_class {
-  my $class = shift;
-  return 1 if $class->can('new');
-  return eval "require $class; 1" ? 1 : 0;
+  my $class = shift or return undef;
+  return $class if $class->can('new');
+  return eval "require $class; 1" ? $class : "";
 }
 
 sub _upgrade {
   my ($self, $name, $input) = @_;
-  if (defined $input) {
-    my ($option) = grep { $_->{name} =~ /^$name$/ } @{$self->{options}};
-    my $class;
-    if ($option->{type} =~ /^(file|dir)/ and $class = $option->{isa} and __load_class($class)) {
-      if (ref($input) eq 'ARRAY') {
-        $input = [map { $class->new($_) } @$input];
-      }
-      else {
-        $input = $class->new("$input");
-      }
-    }
-  }
-  return $input;
+  return $input unless defined $input;
+
+  my ($option) = grep { $_->{name} eq $name } @{$self->{options}};
+  return $input unless my $class = __load_class($option->{isa});
+  return ref $input eq 'ARRAY' ? [map { $class->new($_) } @$input] : $class->new($input);
 }
 
 sub _calculate_option_spec {
