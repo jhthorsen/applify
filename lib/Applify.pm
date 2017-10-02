@@ -40,6 +40,10 @@ sub app {
     $self->print_version;
     $self->_exit('version');
   }
+  elsif (exists $self->{subcommands} and not exists $self->{subcommand}) {
+    $self->print_help;
+    $self->_exit('help');
+  }
 
   $application_class = $self->{application_class} ||= $self->_generate_application_class($code);
   $app = $application_class->new(
@@ -71,14 +75,14 @@ sub import {
   strict->import;
   warnings->import;
 
-  $self->{skip_subs} = {app => 1, option => 1, version => 1, documentation => 1, extends => 1,};
+  $self->{skip_subs} = {app => 1, option => 1, version => 1, documentation => 1, extends => 1, subcommand => 1};
 
   no strict 'refs';
   for my $name (keys %$ns) {
     $self->{'skip_subs'}{$name} = 1;
   }
 
-  for my $k (qw(app extends option version documentation)) {
+  for my $k (qw(app extends option version documentation subcommand)) {
     my $name = $args{$k} // $k;
     next unless $name;
     $export{$k} = $name =~ /::/ ? $name : "$caller[0]\::$name";
@@ -90,6 +94,7 @@ sub import {
   *{$export{version}}       = sub     { $self->version(@_) };
   *{$export{documentation}} = sub     { $self->documentation(@_) };
   *{$export{extends}}       = sub     { $self->extends(@_) };
+  *{$export{subcommand}}    = sub     { $self->subcommand(@_) };
 }
 
 sub new {
@@ -149,6 +154,19 @@ OPTION:
 
   print "Usage:\n";
 
+  if (exists $self->{subcommands}){
+    my $subcmds = $self->{subcommands};
+    my $width = 0;
+    for my $subcmd(@$subcmds) {
+      my $length = length $subcmd->[0];
+      $width = $length if $width < $length;
+    }
+    print "\n    ", File::Basename::basename($0), " [command] [options]\n";
+    print "\ncommands:\n";
+    printf("    %-${width}s  %s\n", @$_) for @$subcmds;
+    print "\noptions:\n";
+  }
+
 OPTION:
   for my $option (@options) {
     my $name = $self->_attr_to_option($option->{name}) or do { print "\n"; next OPTION };
@@ -174,6 +192,24 @@ sub print_version {
   }
 
   printf "%s version %s\n", File::Basename::basename($0), $version;
+}
+
+sub subcommand {
+  return $_[0]->{subcommand} if (exists $_[0]->{subcommand} and 1 == @_);
+  my $self    = shift;
+  my $command = shift or die 'Usage: command $command => $desc => sub { ... }';
+  my $desc    = shift or die 'Usage: command $command => $desc => sub { ... }';
+  my $actions = shift or die 'Usage: command $command => $desc => sub { ... }';
+  $self->{subcommands} ||= [];
+  push @{$self->{subcommands}}, [ lc $command => $desc ];
+  if (@ARGV and lc($ARGV[0]) eq lc($command)) {
+    $self->{subcommand} = shift @ARGV; # only set for valid subcommands
+    # no warnings 'redefine';
+    # local *Applify::app = sub {
+    #   warn "app {} must be the last function called in script\n";
+    # };
+    $actions->($self);
+  }
 }
 
 sub version {
@@ -247,7 +283,7 @@ sub _generate_application_class {
     package $application_class;
     use base qw(@$extends);
     1;
-  ] or die "Failed to generate applicatin class: $@";
+  ] or die "Failed to generate application class: $@";
 
   {
     no strict 'refs';
@@ -552,6 +588,35 @@ C<--version> switch to your script.
 Specify which classes this application should inherit from. These
 classes can be L<Moose> based.
 
+=head2 subcommand
+
+    subcommand list => 'provide a listing objects' => sub {
+      option flag => long => 'long listing';
+      option flag => recursive => 'recursively list objects';
+    };
+    subcommand create => 'create a new object' => sub {
+      option str => name => 'name of new object', required => 1;
+      option str => description => 'description for the object', required => 1;
+    };
+
+    app {
+      my $self = shift;
+      my $subcommand = $self->_script->subcommand;
+      if ($subcommand eq 'create') {
+        ## do creating
+      } else {
+        ## do listing
+      }
+      return 0;
+    };
+
+This function allows for creating multiple related sub commands within the same
+script in a similar fashion to C<git>. The L</option>, L</extends> and
+L</documentation> exported functions may sensibly be called within the
+subroutine. Calling the function with no arguments will return the running
+subcommand, i.e. a valid C<$ARGV[0]>. Non valid values for the subcommand given
+on the command line will result in the help being displayed.
+
 =head2 app
 
     app CODE;
@@ -616,6 +681,6 @@ it under the same terms as Perl itself.
 
 Jan Henning Thorsen - C<jhthorsen@cpan.org>
 
-Roy Storey
+Roy Storey - C<kiwiroy@cpan.org>
 
 =cut
