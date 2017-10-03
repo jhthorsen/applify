@@ -27,9 +27,7 @@ app {};
 HERE
 
 {
-  my ($app, $exited, $err, $stdout, $stderr) =
-    eval_script($code, 'log', '--age', '2d', '--save');
-  is $exited, 0, 'did not exit';
+  my $app = eval_script($code, 'log', '--age', '2d', '--save');
   isa_ok $app, 'MyLogging', 'correct inheritance';
   is $app->age, '2d', 'age option set';
   is $app->save, 1, 'global option set';
@@ -57,32 +55,37 @@ HERE
 
 
 {
-  my ($app, $exited, $err, $stdout, $stderr) =
-    eval_script($code, 'logs', '--long', 'prefix');
-  ok $exited, 'exit was called';
-  like $stdout, qr/Usage:/, 'printed help';
+  my $app = eval_script($code, 'logs', '--long', 'prefix');
   isa_ok $app, 'HASH', 'object as exit did not happen';
   is $app->save, undef, 'not set';
+  my $script = $app->_script;
+  is $script->subcommand, undef, 'no matching subcommand';
+  is + (run_method($script, 'print_help'))[0], <<'HERE', 'print_help()';
+Usage:
+
+    subcommand.t [command] [options]
+
+commands:
+    list  provide a listing
+    log   provide a log
+
+options:
+   --input-file  input
+   --save        save work
+
+   --help        Print this help text
+
+HERE
+
 }
 
 sub eval_script {
     my ($code, @args) = @_;
     local @ARGV = @args;
-    my ($exited, $app) = (0);
-    local *STDOUT;
-    local *STDERR;
-    my $stdout = '';
-    my $stderr = '';
-    open STDOUT, '>', \$stdout;
-    open STDERR, '>', \$stderr;
 
-    {
-      local *CORE::GLOBAL::exit = sub (;$) { $exited = 1; };
-      $app = eval "$code";
-      # no warnings 'once' and https://stackoverflow.com/a/25376064
-      *CORE::GLOBAL::exit = *CORE::exit;
-    }
-    return ($app, $exited, $@, $stdout, $stderr);
+    my $app = eval "$code" or die $@;
+
+    return $app;
 }
 
 done_testing();

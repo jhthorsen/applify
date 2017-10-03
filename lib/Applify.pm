@@ -40,7 +40,9 @@ sub app {
     $self->print_version;
     $self->_exit('version');
   }
-  elsif (exists $self->{subcommands} and not exists $self->{subcommand}) {
+  elsif (!defined wantarray and
+         exists $self->{subcommands} and
+         !exists $self->{subcommand}) {
     $self->print_help;
     $self->_exit('help');
   }
@@ -195,7 +197,7 @@ sub print_version {
 }
 
 sub subcommand {
-  return $_[0]->{subcommand} if (exists $_[0]->{subcommand} and 1 == @_);
+  return $_[0]->{subcommand} if (exists $_[0]->{subcommands} and 1 == @_);
   my $self    = shift;
   my $command = shift or die 'Usage: command $command => $desc => sub { ... }';
   my $desc    = shift or die 'Usage: command $command => $desc => sub { ... }';
