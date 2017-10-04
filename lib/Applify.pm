@@ -9,6 +9,7 @@ use constant SUB_NAME_IS_AVAILABLE => $INC{'App/FatPacker/Trace.pm'}
 
 our $VERSION = '0.13';
 our $PERLDOC = 'perldoc';
+our $SUBCMD_PREFIX = "command";
 my $ANON = 1;
 
 sub app {
@@ -39,12 +40,6 @@ sub app {
   elsif ($options{version}) {
     $self->print_version;
     $self->_exit('version');
-  }
-  elsif (!defined wantarray and
-         exists $self->{subcommands} and
-         !exists $self->{subcommand}) {
-    $self->print_help;
-    $self->_exit('help');
   }
 
   $application_class = $self->{application_class} ||= $self->_generate_application_class($code);
@@ -197,7 +192,8 @@ sub print_version {
 }
 
 sub subcommand {
-  return $_[0]->{subcommand} if (exists $_[0]->{subcommands} and 1 == @_);
+  return $_[0]->{subcommand}
+    if (exists $_[0]->{app} or exists $_[0]->{subcommands} and 1 == @_);
   my $self    = shift;
   my $command = shift or die 'Usage: command $command => $desc => sub { ... }';
   my $desc    = shift or die 'Usage: command $command => $desc => sub { ... }';
@@ -301,7 +297,8 @@ sub _generate_application_class {
           $app->_script->print_help;
           die "Required attribute missing: $required\n";
         }
-
+        # get subcommand code - which should have a registered subroutine
+        $code = $app->_script->_subcommand_code || $code;
         return $app->$code(@extra);
       }
     );
@@ -334,6 +331,10 @@ sub _generate_application_class {
   }
 
   return $application_class;
+}
+
+sub _has_subcommands {
+  return exists $_[0]->{subcommands} ? 1 : 0;
 }
 
 sub _load_class {
@@ -380,6 +381,26 @@ sub _sub {
   no strict 'refs';
   return if *$fqn{CODE};
   *$fqn = SUB_NAME_IS_AVAILABLE ? Sub::Name::subname($fqn, $code) : $code;
+}
+
+sub _subcommand_code {
+  my $self = shift;
+  my $code = undef;
+  if ($self->_has_subcommands == 1) {
+    if (my $subcommand = $self->subcommand) {
+      $code = $self->app->can("${SUBCMD_PREFIX}_${subcommand}");
+    }
+    # else {
+    #   # subcommand 'command' => 'desc' => sub { ... }; called,
+    #   # but no matching command in @ARGV, will display help
+    #   $code = sub {
+    #     my ($self, @extra) = @_;
+    #     $self->_script->print_help;
+    #     return 0;
+    #   };
+    # }
+  }
+  return $code;
 }
 
 sub _upgrade {
@@ -601,14 +622,22 @@ classes can be L<Moose> based.
       option str => description => 'description for the object', required => 1;
     };
 
+    sub command_create {
+      my ($self, @extra) = @_;
+      ## do creating
+      return 0;
+    }
+
+    sub command_list {
+      my ($self, @extra) = @_;
+      ## do listing
+      return 0;
+    }
+
     app {
-      my $self = shift;
-      my $subcommand = $self->_script->subcommand;
-      if ($subcommand eq 'create') {
-        ## do creating
-      } else {
-        ## do listing
-      }
+      my ($self, @extra) = @_;
+      ## fallback when no command given.
+      $self->_script->print_help;
       return 0;
     };
 
