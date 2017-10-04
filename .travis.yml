@@ -8,3 +8,7 @@ perl:
   - "5.14"
 before_install:
   - cpanm --quiet --notest Moose
+install:
+  - cpanm -n --quiet --installdeps --with-develop .
+after_success:
+  - cover -test -report coveralls
