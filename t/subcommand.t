@@ -49,7 +49,7 @@ HERE
 }
 
 {
-  my $app = eval_script(<<'HERE', 'disallow', '--name', 'name');
+  my $app = eval_script(<<'HERE');
 package App::Base;
 sub none {}
 package main;
@@ -66,16 +66,10 @@ subcommand disallow => 'app call' => sub {
 app { return 1 };
 HERE
   ok $app, 'not undef';
-  is $app->name, 'name', 'ok, just warns';
-  isa_ok $app, 'App::Base', 'extends ok';
-  is $app->_script->documentation, 'Applify', 'documentation ok';
-
-  is $app->_script->_subcommand_code($app), undef,
-    'when there is no SUBCMD_PREFIX_name sub';
-
+  
   local @ARGV = qw{disallow};
-  is + (run_method($app->_script, 'app'))[1],
-    "Avoided deep recursion. Do not call app {} from subcommand block!\n";
+  like + (run_method($app->_script, 'app'))[1],
+    qr/Looks like you have a typo/, 'confessions of a app happy coder.';
 }
 
 {

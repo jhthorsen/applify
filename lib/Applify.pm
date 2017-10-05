@@ -1,6 +1,7 @@
 package Applify;
 use strict;
 use warnings;
+use Carp ();
 use File::Basename ();
 
 use constant SUB_NAME_IS_AVAILABLE => $INC{'App/FatPacker/Trace.pm'}
@@ -154,13 +155,9 @@ OPTION:
 
   print "Usage:\n";
 
-  if ($self->_has_subcommands){
+  if (%{$self->{subcommands} || {}}){
     my $subcmds = [ sort { $a->{name} cmp $b->{name} } values %{$self->{subcommands}} ];
-    my $width = 0;
-    for my $subcmd(@$subcmds) {
-      my $length = length $subcmd->{name};
-      $width = $length if $width < $length;
-    }
+    my ($width) = sort { $b <=> $a } map { length($_->{name}) } @$subcmds;
     print "\n    ", File::Basename::basename($0), " [command] [options]\n";
     print "\ncommands:\n";
     printf("    %-${width}s  %s\n", @{$_}{'name', 'desc'}) for @$subcmds;
@@ -197,7 +194,7 @@ sub print_version {
 sub subcommand {
   my ($self, $name) = (shift, shift);
   return $self->{subcommand} unless @_;
-  $self->{subcommands}{$name} = { name => $name, desc => $_[0], code => $_[1] };
+  $self->{subcommands}{$name} = { name => $name, desc => $_[0], adaptation => $_[1] };
   return $self;
 }
 
@@ -325,10 +322,6 @@ sub _generate_application_class {
   return $application_class;
 }
 
-sub _has_subcommands {
-  return keys %{$_[0]->{subcommands}} > 0 ? 1 : 0;
-}
-
 sub _load_class {
   my $class = shift or return undef;
   return $class if $class->can('new');
@@ -383,11 +376,11 @@ sub _subcommand_activate {
   {
     no warnings 'redefine';
     local *Applify::app = sub {
-      warn "Avoided deep recursion. Do not call app {} from subcommand block!\n";
+      Carp::confess("Looks like you have a typo in your script! ".
+                    "Cannot have app{} inside a subcommand options block.");
     };
-    $self->{subcommands}{$name}{code}->($self);
+    $self->{subcommands}{$name}{adaptation}->($self);
   }
-  $self->{subcommands}{$name}{active} = 1;
   return 1;
 }
 
