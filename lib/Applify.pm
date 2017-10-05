@@ -1,6 +1,7 @@
 package Applify;
 use strict;
 use warnings;
+use Carp ();
 use File::Basename ();
 
 use constant SUB_NAME_IS_AVAILABLE => $INC{'App/FatPacker/Trace.pm'}
@@ -9,6 +10,7 @@ use constant SUB_NAME_IS_AVAILABLE => $INC{'App/FatPacker/Trace.pm'}
 
 our $VERSION = '0.13';
 our $PERLDOC = 'perldoc';
+our $SUBCMD_PREFIX = "command";
 my $ANON = 1;
 
 sub app {
@@ -17,6 +19,9 @@ sub app {
   my $parser = $self->_option_parser;
   my (%options, @options_spec, $application_class, $app);
 
+  # has to be run before calculating option spec.
+  # cannot do ->can() as application_class isn't created yet.
+  if ($self->_subcommand_activate($ARGV[0])) { shift @ARGV; }
   for my $option (@{$self->{options}}) {
     my $switch = $self->_attr_to_option($option->{name});
     push @options_spec, $self->_calculate_option_spec($option);
@@ -71,14 +76,14 @@ sub import {
   strict->import;
   warnings->import;
 
-  $self->{skip_subs} = {app => 1, option => 1, version => 1, documentation => 1, extends => 1,};
+  $self->{skip_subs} = {app => 1, option => 1, version => 1, documentation => 1, extends => 1, subcommand => 1};
 
   no strict 'refs';
   for my $name (keys %$ns) {
     $self->{'skip_subs'}{$name} = 1;
   }
 
-  for my $k (qw(app extends option version documentation)) {
+  for my $k (qw(app extends option version documentation subcommand)) {
     my $name = $args{$k} // $k;
     next unless $name;
     $export{$k} = $name =~ /::/ ? $name : "$caller[0]\::$name";
@@ -90,6 +95,7 @@ sub import {
   *{$export{version}}       = sub     { $self->version(@_) };
   *{$export{documentation}} = sub     { $self->documentation(@_) };
   *{$export{extends}}       = sub     { $self->extends(@_) };
+  *{$export{subcommand}}    = sub     { $self->subcommand(@_) };
 }
 
 sub new {
@@ -149,6 +155,15 @@ OPTION:
 
   print "Usage:\n";
 
+  if (%{$self->{subcommands} || {}}){
+    my $subcmds = [ sort { $a->{name} cmp $b->{name} } values %{$self->{subcommands}} ];
+    my ($width) = sort { $b <=> $a } map { length($_->{name}) } @$subcmds;
+    print "\n    ", File::Basename::basename($0), " [command] [options]\n";
+    print "\ncommands:\n";
+    printf("    %-${width}s  %s\n", @{$_}{'name', 'desc'}) for @$subcmds;
+    print "\noptions:\n";
+  }
+
 OPTION:
   for my $option (@options) {
     my $name = $self->_attr_to_option($option->{name}) or do { print "\n"; next OPTION };
@@ -174,6 +189,13 @@ sub print_version {
   }
 
   printf "%s version %s\n", File::Basename::basename($0), $version;
+}
+
+sub subcommand {
+  my ($self, $name) = (shift, shift);
+  return $self->{subcommand} unless @_;
+  $self->{subcommands}{$name} = { name => $name, desc => $_[0], adaptation => $_[1] };
+  return $self;
 }
 
 sub version {
@@ -247,7 +269,7 @@ sub _generate_application_class {
     package $application_class;
     use base qw(@$extends);
     1;
-  ] or die "Failed to generate applicatin class: $@";
+  ] or die "Failed to generate application class: $@";
 
   {
     no strict 'refs';
@@ -263,7 +285,9 @@ sub _generate_application_class {
           $app->_script->print_help;
           die "Required attribute missing: $required\n";
         }
-
+        # get subcommand code - which should have a registered subroutine
+        # or fallback to app {} block.
+        $code = $app->_script->_subcommand_code($app) || $code;
         return $app->$code(@extra);
       }
     );
@@ -342,6 +366,28 @@ sub _sub {
   no strict 'refs';
   return if *$fqn{CODE};
   *$fqn = SUB_NAME_IS_AVAILABLE ? Sub::Name::subname($fqn, $code) : $code;
+}
+
+sub _subcommand_activate {
+  my ($self, $name) = @_;
+  return undef unless $name and $name =~ /^\w+/;
+  return undef unless $self->{subcommands}{$name};
+  $self->{subcommand} = $name;
+  {
+    no warnings 'redefine';
+    local *Applify::app = sub {
+      Carp::confess("Looks like you have a typo in your script! ".
+                    "Cannot have app{} inside a subcommand options block.");
+    };
+    $self->{subcommands}{$name}{adaptation}->($self);
+  }
+  return 1;
+}
+
+sub _subcommand_code {
+  my ($self, $app, $name) = (shift, shift);
+  return undef unless $name = $self->subcommand;
+  return $app->can("${SUBCMD_PREFIX}_${name}");
 }
 
 sub _upgrade {
@@ -552,6 +598,43 @@ C<--version> switch to your script.
 Specify which classes this application should inherit from. These
 classes can be L<Moose> based.
 
+=head2 subcommand
+
+    subcommand list => 'provide a listing objects' => sub {
+      option flag => long => 'long listing';
+      option flag => recursive => 'recursively list objects';
+    };
+    subcommand create => 'create a new object' => sub {
+      option str => name => 'name of new object', required => 1;
+      option str => description => 'description for the object', required => 1;
+    };
+
+    sub command_create {
+      my ($self, @extra) = @_;
+      ## do creating
+      return 0;
+    }
+
+    sub command_list {
+      my ($self, @extra) = @_;
+      ## do listing
+      return 0;
+    }
+
+    app {
+      my ($self, @extra) = @_;
+      ## fallback when no command given.
+      $self->_script->print_help;
+      return 0;
+    };
+
+This function allows for creating multiple related sub commands within the same
+script in a similar fashion to C<git>. The L</option>, L</extends> and
+L</documentation> exported functions may sensibly be called within the
+subroutine. Calling the function with no arguments will return the running
+subcommand, i.e. a valid C<$ARGV[0]>. Non valid values for the subcommand given
+on the command line will result in the help being displayed.
+
 =head2 app
 
     app CODE;
@@ -616,6 +699,6 @@ it under the same terms as Perl itself.
 
 Jan Henning Thorsen - C<jhthorsen@cpan.org>
 
-Roy Storey
+Roy Storey - C<kiwiroy@cpan.org>
 
 =cut
