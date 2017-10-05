@@ -49,6 +49,36 @@ HERE
 }
 
 {
+  my $app = eval_script(<<'HERE', 'disallow', '--name', 'name');
+package App::Base;
+sub none {}
+package main;
+use Applify;
+subcommand disallow => 'app call' => sub {
+  option str => name => 'name';
+  extends 'App::Base';
+  documentation 'Applify';
+  app {
+    my ($self, @extra) = @_;
+    return 0;
+  };
+};
+app { return 1 };
+HERE
+  ok $app, 'not undef';
+  is $app->name, 'name', 'ok, just warns';
+  isa_ok $app, 'App::Base', 'extends ok';
+  is $app->_script->documentation, 'Applify', 'documentation ok';
+
+  is $app->_script->_subcommand_code($app), undef,
+    'when there is no SUBCMD_PREFIX_name sub';
+
+  local @ARGV = qw{disallow};
+  is + (run_method($app->_script, 'app'))[1],
+    "Avoided deep recursion. Do not call app {} from subcommand block!\n";
+}
+
+{
   my $app = eval_script($code, 'list', '--save', '--long', 1);
   isa_ok $app, 'MyListing', 'correct inheritance';
   is $app->save, 1, 'global option set';
@@ -56,8 +86,7 @@ HERE
 
   my $script = $app->_script;
   is $script->subcommand, 'list', 'access the subcommand being run';
-
-  my $code = $script->_subcommand_code;
+  my $code = $script->_subcommand_code($app);
   isa_ok $code, 'CODE', 'code reference';
   is deparse($code), deparse(sub {
     my ($self, @extra) = @_;
@@ -75,7 +104,7 @@ HERE
   is $script->subcommand, 'log', 'access the subcommand being run';
   my $has_log = can_ok $app, qw{start_log end_log};
   ok $has_log, 'app extends MyLogging';
-  my $code = $script->_subcommand_code;
+  my $code = $script->_subcommand_code($app);
   isa_ok $code, 'CODE', 'code reference';
   is deparse($code), deparse(sub {
     my ($self, @extra) = @_;
@@ -108,7 +137,7 @@ HERE
   is $app->save, undef, 'not set';
   my $script = $app->_script;
   is $script->subcommand, undef, 'no matching subcommand';
-  my $code = $script->_subcommand_code;
+  my $code = $script->_subcommand_code($app);
   is $code, undef, 'no code reference';
   is + (run_method($app, 'run'))[0], <<'HERE', 'should print help';
 Usage:
@@ -153,7 +182,7 @@ HERE
   is $app->output, 'app.pm', 'output set';
   my $script = $app->_script;
   is $script->subcommand, 'new', 'matching subcommand';
-  my $code = $script->_subcommand_code;
+  my $code = $script->_subcommand_code($app);
   isa_ok $code, 'CODE', 'no code reference';
   is deparse($code), deparse(sub {
     my ($self, @extra) = @_;

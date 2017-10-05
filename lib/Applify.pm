@@ -18,6 +18,9 @@ sub app {
   my $parser = $self->_option_parser;
   my (%options, @options_spec, $application_class, $app);
 
+  # has to be run before calculating option spec.
+  # cannot do ->can() as application_class isn't created yet.
+  if ($self->_subcommand_activate($ARGV[0])) { shift @ARGV; }
   for my $option (@{$self->{options}}) {
     my $switch = $self->_attr_to_option($option->{name});
     push @options_spec, $self->_calculate_option_spec($option);
@@ -151,16 +154,16 @@ OPTION:
 
   print "Usage:\n";
 
-  if (exists $self->{subcommands}){
-    my $subcmds = $self->{subcommands};
+  if ($self->_has_subcommands){
+    my $subcmds = [ sort { $a->{name} cmp $b->{name} } values %{$self->{subcommands}} ];
     my $width = 0;
     for my $subcmd(@$subcmds) {
-      my $length = length $subcmd->[0];
+      my $length = length $subcmd->{name};
       $width = $length if $width < $length;
     }
     print "\n    ", File::Basename::basename($0), " [command] [options]\n";
     print "\ncommands:\n";
-    printf("    %-${width}s  %s\n", @$_) for @$subcmds;
+    printf("    %-${width}s  %s\n", @{$_}{'name', 'desc'}) for @$subcmds;
     print "\noptions:\n";
   }
 
@@ -192,22 +195,10 @@ sub print_version {
 }
 
 sub subcommand {
-  return $_[0]->{subcommand}
-    if (exists $_[0]->{app} or exists $_[0]->{subcommands} and 1 == @_);
-  my $self    = shift;
-  my $command = shift or die 'Usage: command $command => $desc => sub { ... }';
-  my $desc    = shift or die 'Usage: command $command => $desc => sub { ... }';
-  my $actions = shift or die 'Usage: command $command => $desc => sub { ... }';
-  $self->{subcommands} ||= [];
-  push @{$self->{subcommands}}, [ lc $command => $desc ];
-  if (@ARGV and lc($ARGV[0]) eq lc($command)) {
-    $self->{subcommand} = shift @ARGV; # only set for valid subcommands
-    # no warnings 'redefine';
-    # local *Applify::app = sub {
-    #   warn "app {} must be the last function called in script\n";
-    # };
-    $actions->($self);
-  }
+  my ($self, $name) = (shift, shift);
+  return $self->{subcommand} unless @_;
+  $self->{subcommands}{$name} = { name => $name, desc => $_[0], code => $_[1] };
+  return $self;
 }
 
 sub version {
@@ -298,7 +289,8 @@ sub _generate_application_class {
           die "Required attribute missing: $required\n";
         }
         # get subcommand code - which should have a registered subroutine
-        $code = $app->_script->_subcommand_code || $code;
+        # or fallback to app {} block.
+        $code = $app->_script->_subcommand_code($app) || $code;
         return $app->$code(@extra);
       }
     );
@@ -334,7 +326,7 @@ sub _generate_application_class {
 }
 
 sub _has_subcommands {
-  return exists $_[0]->{subcommands} ? 1 : 0;
+  return keys %{$_[0]->{subcommands}} > 0 ? 1 : 0;
 }
 
 sub _load_class {
@@ -383,24 +375,26 @@ sub _sub {
   *$fqn = SUB_NAME_IS_AVAILABLE ? Sub::Name::subname($fqn, $code) : $code;
 }
 
-sub _subcommand_code {
-  my $self = shift;
-  my $code = undef;
-  if ($self->_has_subcommands == 1) {
-    if (my $subcommand = $self->subcommand) {
-      $code = $self->app->can("${SUBCMD_PREFIX}_${subcommand}");
-    }
-    # else {
-    #   # subcommand 'command' => 'desc' => sub { ... }; called,
-    #   # but no matching command in @ARGV, will display help
-    #   $code = sub {
-    #     my ($self, @extra) = @_;
-    #     $self->_script->print_help;
-    #     return 0;
-    #   };
-    # }
+sub _subcommand_activate {
+  my ($self, $name) = @_;
+  return undef unless $name and $name =~ /^\w+/;
+  return undef unless $self->{subcommands}{$name};
+  $self->{subcommand} = $name;
+  {
+    no warnings 'redefine';
+    local *Applify::app = sub {
+      warn "Avoided deep recursion. Do not call app {} from subcommand block!\n";
+    };
+    $self->{subcommands}{$name}{code}->($self);
   }
-  return $code;
+  $self->{subcommands}{$name}{active} = 1;
+  return 1;
+}
+
+sub _subcommand_code {
+  my ($self, $app, $name) = (shift, shift);
+  return undef unless $name = $self->subcommand;
+  return $app->can("${SUBCMD_PREFIX}_${name}");
 }
 
 sub _upgrade {
