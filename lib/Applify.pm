@@ -1,15 +1,15 @@
 package Applify;
 use strict;
 use warnings;
-use Carp ();
+use Carp           ();
 use File::Basename ();
 
 use constant SUB_NAME_IS_AVAILABLE => $INC{'App/FatPacker/Trace.pm'}
   ? 0    # this will be true when running under "fatpack"
   : eval 'use Sub::Name; 1' ? 1 : 0;
 
-our $VERSION = '0.13';
-our $PERLDOC = 'perldoc';
+our $VERSION       = '0.14';
+our $PERLDOC       = 'perldoc';
 our $SUBCMD_PREFIX = "command";
 my $ANON = 1;
 
@@ -155,8 +155,8 @@ OPTION:
 
   print "Usage:\n";
 
-  if (%{$self->{subcommands} || {}}){
-    my $subcmds = [ sort { $a->{name} cmp $b->{name} } values %{$self->{subcommands}} ];
+  if (%{$self->{subcommands} || {}}) {
+    my $subcmds = [sort { $a->{name} cmp $b->{name} } values %{$self->{subcommands}}];
     my ($width) = sort { $b <=> $a } map { length($_->{name}) } @$subcmds;
     print "\n    ", File::Basename::basename($0), " [command] [options]\n";
     print "\ncommands:\n";
@@ -194,7 +194,7 @@ sub print_version {
 sub subcommand {
   my ($self, $name) = (shift, shift);
   return $self->{subcommand} unless @_;
-  $self->{subcommands}{$name} = { name => $name, desc => $_[0], adaptation => $_[1] };
+  $self->{subcommands}{$name} = {name => $name, desc => $_[0], adaptation => $_[1]};
   return $self;
 }
 
@@ -285,6 +285,7 @@ sub _generate_application_class {
           $app->_script->print_help;
           die "Required attribute missing: $required\n";
         }
+
         # get subcommand code - which should have a registered subroutine
         # or fallback to app {} block.
         $code = $app->_script->_subcommand_code($app) || $code;
@@ -376,8 +377,7 @@ sub _subcommand_activate {
   {
     no warnings 'redefine';
     local *Applify::app = sub {
-      Carp::confess("Looks like you have a typo in your script! ".
-                    "Cannot have app{} inside a subcommand options block.");
+      Carp::confess("Looks like you have a typo in your script! Cannot have app{} inside a subcommand options block.");
     };
     $self->{subcommands}{$name}{adaptation}->($self);
   }
@@ -409,7 +409,7 @@ Applify - Write object oriented scripts with ease
 
 =head1 VERSION
 
-0.13
+0.14
 
 =head1 DESCRIPTION
 
@@ -488,10 +488,10 @@ application object.
 
 =head2 option
 
-    option $type => $name => $documentation;
-    option $type => $name => $documentation, $default;
-    option $type => $name => $documentation, $default, @args;
-    option $type => $name => $documentation, @args;
+  option $type => $name => $documentation;
+  option $type => $name => $documentation, $default;
+  option $type => $name => $documentation, $default, @args;
+  option $type => $name => $documentation, @args;
 
 This function is used to define options which can be given to this
 application. See L</SYNOPSIS> for example code. This function can also be
@@ -526,18 +526,18 @@ Used to define value types for this input.
 The name of an application switch. This name will also be used as
 accessor name inside the application. Example:
 
-    # define an application switch:
-    option file => some_file => '...';
+  # define an application switch:
+  option file => some_file => '...';
 
-    # call the application from command line:
-    > myapp.pl --some-file /foo/bar
+  # call the application from command line:
+  > myapp.pl --some-file /foo/bar
 
-    # run the application code:
-    app {
-        my $self = shift;
-        print $self->some_file # prints "/foo/bar"
-        return 0;
-    };
+  # run the application code:
+  app {
+    my $self = shift;
+    print $self->some_file # prints "/foo/bar"
+    return 0;
+  };
 
 =item * C<$documentation>
 
@@ -576,57 +576,58 @@ future release.
 
 =head2 documentation
 
-    documentation __FILE__; # current file
-    documentation '/path/to/file';
-    documentation 'Some::Module';
+  documentation __FILE__; # current file
+  documentation '/path/to/file';
+  documentation 'Some::Module';
 
 Specifies where to retrieve documentaion from when giving the C<--man>
 switch to your script.
 
 =head2 version
 
-    version 'Some::Module';
-    version $num;
+  version 'Some::Module';
+  version $num;
 
 Specifies where to retrieve the version number from when giving the
 C<--version> switch to your script.
 
 =head2 extends
 
-    extends @classes;
+  extends @classes;
 
 Specify which classes this application should inherit from. These
 classes can be L<Moose> based.
 
 =head2 subcommand
 
-    subcommand list => 'provide a listing objects' => sub {
-      option flag => long => 'long listing';
-      option flag => recursive => 'recursively list objects';
-    };
-    subcommand create => 'create a new object' => sub {
-      option str => name => 'name of new object', required => 1;
-      option str => description => 'description for the object', required => 1;
-    };
+  subcommand list => 'provide a listing objects' => sub {
+    option flag => long => 'long listing';
+    option flag => recursive => 'recursively list objects';
+  };
 
-    sub command_create {
-      my ($self, @extra) = @_;
-      ## do creating
-      return 0;
-    }
+  subcommand create => 'create a new object' => sub {
+    option str => name => 'name of new object', required => 1;
+    option str => description => 'description for the object', required => 1;
+  };
 
-    sub command_list {
-      my ($self, @extra) = @_;
-      ## do listing
-      return 0;
-    }
+  sub command_create {
+    my ($self, @extra) = @_;
+    ## do creating
+    return 0;
+  }
 
-    app {
-      my ($self, @extra) = @_;
-      ## fallback when no command given.
-      $self->_script->print_help;
-      return 0;
-    };
+  sub command_list {
+    my ($self, @extra) = @_;
+    ## do listing
+    return 0;
+  }
+
+  app {
+    my ($self, @extra) = @_;
+    ## fallback when no command given.
+    $self->_script->print_help;
+    return 0;
+  };
 
 This function allows for creating multiple related sub commands within the same
 script in a similar fashion to C<git>. The L</option>, L</extends> and
@@ -637,7 +638,7 @@ on the command line will result in the help being displayed.
 
 =head2 app
 
-    app CODE;
+  app CODE;
 
 This function will define the code block which is called when the application
 is started. See L</SYNOPSIS> for example code. This function can also be
@@ -652,7 +653,7 @@ application object in list/scalar context (from L<perlfunc/do>).
 
 =head2 options
 
-    $array_ref = $self->options;
+  $array_ref = $self->options;
 
 Holds the application options given to L</option>.
 
@@ -660,7 +661,7 @@ Holds the application options given to L</option>.
 
 =head2 new
 
-    $self = $class->new({ options => $array_ref, ... });
+  $self = $class->new({ options => $array_ref, ... });
 
 Object constructor. Creates a new object representing the script meta
 information.
@@ -670,20 +671,20 @@ information.
 Will print L</options> to selected filehandle (STDOUT by default) in
 a normalized matter. Example:
 
-    Usage:
-       --foo      Foo does this and that
-     * --bar      Bar does something else
+  Usage:
+     --foo      Foo does this and that
+   * --bar      Bar does something else
 
-       --help     Print this help text
-       --man      Display manual for this application
-       --version  Print application name and version
+     --help     Print this help text
+     --man      Display manual for this application
+     --version  Print application name and version
 
 =head2 print_version
 
 Will print L</version> to selected filehandle (STDOUT by default) in
 a normalized matter. Example:
 
-    some-script.pl version 1.23
+  some-script.pl version 1.23
 
 =head2 import
 
