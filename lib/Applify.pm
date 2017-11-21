@@ -350,6 +350,16 @@ sub _print_synopsis {
   unless (-e $documentation) {
     eval "use $documentation; 1" or die "Could not load $documentation: $@";
     $documentation =~ s!::!/!g;
+    # might be FatPacked $INC{"$documentation.pm"}{"$documentation.pm"}
+    if (ref($INC{"$documentation.pm"})) {
+      my @lines = split /\r?\n/, $INC{"$documentation.pm"}{"$documentation.pm"};
+      for (@lines) {
+        last if $print and /^=(?:cut|head1)/;
+        print if $print;
+        $print = 1 if /^=head1 SYNOPSIS/;
+      }
+      return ;
+    }
     $documentation = $INC{"$documentation.pm"};
   }
 
