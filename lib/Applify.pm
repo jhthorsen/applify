@@ -249,6 +249,18 @@ sub _default_options {
   return @default;
 }
 
+sub _documentation_class_handle {
+  my ($self, $inc_entry, $inc_key) = @_;
+  # check for FatPacked::140677333829776=HASH entry in %INC
+  # You can also insert hooks into the import facility by putting Perl code
+  # directly into the @INC array. There are three forms of hooks: subroutine
+  # references, array references, and blessed objects.
+  return $inc_entry->INC($inc_key)
+    if ((ref($inc_entry) || 'CODE') !~ m/(CODE|ARRAY)/);
+  open my $fh, '<', $inc_entry or die "Failed to read synopsis from $inc_entry: $@";
+  return $fh;
+}
+
 sub _exit {
   my ($self, $reason) = @_;
   exit 0 unless ($reason =~ /^\d+$/);    # may change without warning...
@@ -345,15 +357,15 @@ sub _option_to_attr {
 sub _print_synopsis {
   my $self = shift;
   my $documentation = $self->documentation or return;
-  my $print;
+  my ($print, $classpath);
 
   unless (-e $documentation) {
     eval "use $documentation; 1" or die "Could not load $documentation: $@";
     $documentation =~ s!::!/!g;
-    $documentation = $INC{"$documentation.pm"};
+    $documentation = $INC{$classpath = "$documentation.pm"};
   }
 
-  open my $FH, '<', $documentation or die "Failed to read synopsis from $documentation: $@";
+  my $FH = $self->_documentation_class_handle($documentation, $classpath);
 
   while (<$FH>) {
     last if $print and /^=(?:cut|head1)/;
