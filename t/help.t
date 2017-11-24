@@ -1,6 +1,7 @@
 use strict;
 use warnings;
-## This BEGIN block
+## This BEGIN block is a minimal fatpack entry
+## see perldoc App::FatPacker and perldoc -f require
 BEGIN {
 my %fatpacked;
 
