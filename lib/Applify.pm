@@ -23,10 +23,10 @@ sub app {
   # cannot do ->can() as application_class isn't created yet.
   if ($self->_subcommand_activate($ARGV[0])) { shift @ARGV; }
   for my $option (@{$self->{options}}) {
-    my $switch = $self->_attr_to_option($option->{name});
+    my $option = $self->_attr_to_option($option->{name});
     push @options_spec, $self->_calculate_option_spec($option);
-    $options{$switch} = $option->{default}     if exists $option->{default};
-    $options{$switch} = [@{$options{$switch}}] if ref($options{$switch}) eq 'ARRAY';
+    $options{$option} = $option->{default}     if exists $option->{default};
+    $options{$option} = [@{$options{$option}}] if ref($options{$option}) eq 'ARRAY';
   }
 
   unless ($parser->getoptions(\%options, @options_spec, $self->_default_options)) {
@@ -251,12 +251,12 @@ sub _default_options {
 
 sub _documentation_class_handle {
   my ($self, $inc_entry, $inc_key) = @_;
+
   # check for FatPacked::140677333829776=HASH entry in %INC
   # You can also insert hooks into the import facility by putting Perl code
   # directly into the @INC array. There are three forms of hooks: subroutine
   # references, array references, and blessed objects.
-  return $inc_entry->INC($inc_key)
-    if ((ref($inc_entry) || 'CODE') !~ m/(CODE|ARRAY)/);
+  return $inc_entry->INC($inc_key) if ((ref($inc_entry) || 'CODE') !~ m/(CODE|ARRAY)/);
   open my $fh, '<', $inc_entry or die "Failed to read synopsis from $inc_entry: $@";
   return $fh;
 }
@@ -425,9 +425,9 @@ Applify - Write object oriented scripts with ease
 
 =head1 DESCRIPTION
 
-This module should keep all the noise away and let you write scripts
-very easily. These scripts can even be unittested even though they
-are define directly in the script file and not in a module.
+This module should keep all the noise away and let you write scripts very
+easily. These scripts can even be unit tested even though they are defined
+directly in the script file and not in a module.
 
 =head1 SYNOPSIS
 
@@ -445,6 +445,7 @@ are define directly in the script file and not in a module.
     return int rand 100;
   }
 
+  # app {...}; must be the last statement in the script
   app {
     my($self, @extra) = @_;
     my $exit_value = 0;
@@ -463,9 +464,9 @@ are define directly in the script file and not in a module.
 =head1 APPLICATION CLASS
 
 This module will generate an application class, which C<$self> inside the
-L</app> block refere to. This class will have:
+L</app> block refer to. This class will have:
 
-=over 4
+=over 2
 
 =item * new()
 
@@ -491,7 +492,7 @@ with L</options>.
 
 =item * Other accessors
 
-Any L</option> (application switch) will be available as an accessor on the
+Any L</option> (application option) will be available as an accessor on the
 application object.
 
 =back
@@ -509,36 +510,27 @@ This function is used to define options which can be given to this
 application. See L</SYNOPSIS> for example code. This function can also be
 called as a method on C<$self>.
 
-=over 4
+=over 2
 
 =item * $type
 
-Used to define value types for this input.
+Used to define value types for this input. Can be:
 
-=over 4
-
-=item bool, flag
-
-=item inc
-
-=item str
-
-=item int
-
-=item num
-
-=item file (TODO)
-
-=item dir (TODO)
-
-=back
+  | $type | Example             | Attribute value |
+  |-------|---------------------|-----------------|
+  | bool  | --foo, --no-foo     | foo=1, foo=0    |
+  | flag  | --foo, --no-foo     | foo=1, foo=0    |
+  | inc   | --verbose --verbose | verbose=2       |
+  | str   | --name batwoman     | name=batwoman   |
+  | int   | --answer 42         | answer=42       |
+  | num   | --pie 3.14          | pie=3.14        |
 
 =item * $name
 
-The name of an application switch. This name will also be used as
-accessor name inside the application. Example:
+The name of an application option. This name will also be used as accessor name
+inside the application. Example:
 
-  # define an application switch:
+  # define an application option: 
   option file => some_file => '...';
 
   # call the application from command line:
@@ -557,7 +549,7 @@ Used as description text when printing the usage text.
 
 =item * C<@args>
 
-=over 4
+=over 2
 
 =item * C<required>
 
@@ -592,8 +584,8 @@ future release.
   documentation '/path/to/file';
   documentation 'Some::Module';
 
-Specifies where to retrieve documentaion from when giving the C<--man>
-switch to your script.
+Specifies where to retrieve documentaion from when giving the C<--man> option
+to your script.
 
 =head2 version
 
@@ -601,7 +593,7 @@ switch to your script.
   version $num;
 
 Specifies where to retrieve the version number from when giving the
-C<--version> switch to your script.
+C<--version> option to your script.
 
 =head2 extends
 
@@ -657,7 +649,7 @@ is started. See L</SYNOPSIS> for example code. This function can also be
 called as a method on C<$self>.
 
 IMPORTANT: This function must be the last function called in the script file
-for unittests to work. Reason for this is that this function runs the
+for unit tests to work. Reason for this is that this function runs the
 application in void context (started from command line), but returns the
 application object in list/scalar context (from L<perlfunc/do>).
 
