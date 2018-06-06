@@ -8,7 +8,7 @@ use constant SUB_NAME_IS_AVAILABLE => $INC{'App/FatPacker/Trace.pm'}
   ? 0    # this will be true when running under "fatpack"
   : eval 'use Sub::Name; 1' ? 1 : 0;
 
-our $VERSION       = '0.14';
+our $VERSION       = '0.15';
 our $PERLDOC       = 'perldoc';
 our $SUBCMD_PREFIX = "command";
 my $ANON = 1;
@@ -421,7 +421,7 @@ Applify - Write object oriented scripts with ease
 
 =head1 VERSION
 
-0.14
+0.15
 
 =head1 DESCRIPTION
 
