@@ -468,12 +468,12 @@ L</app> block refer to. This class will have:
 
 =over 2
 
-=item * new()
+=item * C<new()>
 
 An object constructor. This method will not be auto generated if any of
 the classes given to L</extends> has the method C<new()>.
 
-=item * run()
+=item * C<run()>
 
 This method is basically the code block given to L</app>.
 
@@ -482,7 +482,7 @@ This method is basically the code block given to L</app>.
 Other methods defined in the script file will be accesible from C<$self>
 inside C<app{}>.
 
-=item * _script()
+=item * C<_script()>
 
 This is an accessor which return the L<Applify> object which
 is refered to as C<$self> in this documentation.
@@ -512,7 +512,7 @@ called as a method on C<$self>.
 
 =over 2
 
-=item * $type
+=item * C<$type>
 
 Used to define value types for this input. Can be:
 
@@ -525,7 +525,7 @@ Used to define value types for this input. Can be:
   | int   | --answer 42         | answer=42       |
   | num   | --pie 3.14          | pie=3.14        |
 
-=item * $name
+=item * C<$name>
 
 The name of an application option. This name will also be used as accessor name
 inside the application. Example:
