@@ -551,6 +551,12 @@ Used as description text when printing the usage text.
 
 =over 2
 
+=item * C<alias>
+
+Used to define an alias for the option. Example:
+
+  option inc => verbose => "Output debug information", alias => "v";
+
 =item * C<required>
 
 The script will not start if a required field is omitted.
