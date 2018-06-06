@@ -23,10 +23,10 @@ sub app {
   # cannot do ->can() as application_class isn't created yet.
   if ($self->_subcommand_activate($ARGV[0])) { shift @ARGV; }
   for my $option (@{$self->{options}}) {
-    my $option = $self->_attr_to_option($option->{name});
+    my $options_key = $self->_attr_to_option($option->{name});
     push @options_spec, $self->_calculate_option_spec($option);
-    $options{$option} = $option->{default}     if exists $option->{default};
-    $options{$option} = [@{$options{$option}}] if ref($options{$option}) eq 'ARRAY';
+    $options{$options_key} = $option->{default}          if exists $option->{default};
+    $options{$options_key} = [@{$options{$options_key}}] if ref($options{$options_key}) eq 'ARRAY';
   }
 
   unless ($parser->getoptions(\%options, @options_spec, $self->_default_options)) {
