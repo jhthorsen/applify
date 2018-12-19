@@ -3,10 +3,11 @@ use strict;
 use warnings;
 use Carp           ();
 use File::Basename ();
-
+use File::Spec     ();
 use constant SUB_NAME_IS_AVAILABLE => $INC{'App/FatPacker/Trace.pm'}
   ? 0    # this will be true when running under "fatpack"
   : eval 'use Sub::Name; 1' ? 1 : 0;
+use constant APPLIFY_PAR_PACKED => $INC{'PAR/Dist.pm'} && $ENV{'PAR_0'} ? 1 : 0;
 
 our $VERSION       = '0.15';
 our $PERLDOC       = 'perldoc';
@@ -38,6 +39,11 @@ sub app {
     $self->_exit('help');
   }
   elsif ($options{man}) {
+    local $ENV{'PERL5LIB'} =
+        join(':',
+             File::Spec->catdir($ENV{'PAR_TEMP'}, 'inc', 'lib'),
+             File::Spec->catdir($ENV{'PAR_TEMP'}, 'inc')
+        ) if APPLIFY_PAR_PACKED;
     system $PERLDOC => $self->documentation;
     $self->_exit($? >> 8);
   }
@@ -358,6 +364,11 @@ sub _print_synopsis {
   my $self = shift;
   my $documentation = $self->documentation or return;
   my ($print, $classpath);
+
+  if (APPLIFY_PAR_PACKED && $documentation =~ m{^script/}) {
+      $documentation = File::Spec->catfile($ENV{PAR_TEMP}, 'inc',
+                                           $documentation);
+  }
 
   unless (-e $documentation) {
     eval "use $documentation; 1" or die "Could not load $documentation: $@";
