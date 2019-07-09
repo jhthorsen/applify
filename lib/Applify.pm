@@ -321,12 +321,14 @@ sub _generate_application_class {
 
     for my $option (@{$self->{options}}) {
       my $name = $option->{name};
-      my $fqn = join '::', $application_class, $name;
       if ($meta) {
         $meta->add_attribute($name => {is => 'rw', default => $option->{default}});
       }
       else {
+        my $fqn = join '::', $application_class, $name;
         _sub($fqn => sub { @_ == 2 and $_[0]->{$name} = $_[1]; $_[0]->{$name} });
+        $fqn = join '::', $application_class, join '_', has => $name;
+        _sub($fqn => sub { !!defined $_[0]->{$name} });
       }
       push @required, $name if $option->{required};
     }
@@ -508,7 +510,11 @@ application object.
 
 This function is used to define options which can be given to this
 application. See L</SYNOPSIS> for example code. This function can also be
-called as a method on C<$self>.
+called as a method on C<$self>. Additionally, similar to
+L<Moose attributes|Moose::Manual::Attributes#Predicate-and-clearer-methods>, a
+C<has_$name> method will be generated, which can be called on C<$self> to
+determine if the L</option> has been set, either by a user or from the
+C<$default>.
 
 =over 2
 

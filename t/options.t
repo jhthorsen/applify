@@ -53,4 +53,33 @@ eval {
 };
 like $@, qr/^Usage: option /, 'die on unsupported option type';
 
+
+$app = eval <<"HERE" or die $@;
+use Applify;
+option str => iii => 'd1';
+option str => input_file => 'd2';
+option str => output_file => d3 => default => 'file.out';
+option str => template => template => default => 'empty';
+sub has_template {
+  return 0;
+}
+app { };
+HERE
+
+$script = $app->_script;
+
+my $instance = app_instance($script, qw{-input-file /tmp/test});
+is $instance->has_input_file, 1, 'Moose style';
+is !$instance->has_iii, 1, 'does not exist';
+is $instance->has_output_file, 1, 'default always exists';
+is $instance->has_template, 0, 'has_template not replaced see _sub()';
+is $instance->template, 'empty', 'default exists';
+
+sub app_instance {
+  my $script = shift;
+  local @ARGV = @_;
+  my $app = $script->app;
+  return $app;
+}
+
 done_testing;
