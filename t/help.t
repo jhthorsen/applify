@@ -56,7 +56,7 @@ Usage:
 
    --help     Print this help text
 
-notes:
+Notes:
  * denotes a required option
  + denotes an option that accepts multiple values
 HERE
@@ -82,7 +82,7 @@ Usage:
    --man      Display manual for this application
    --version  Print application name and version
 
-notes:
+Notes:
  * denotes a required option
  + denotes an option that accepts multiple values
 HERE
@@ -104,7 +104,7 @@ Usage:
    --man      Display manual for this application
    --version  Print application name and version
 
-notes:
+Notes:
  * denotes a required option
  + denotes an option that accepts multiple values
 HERE

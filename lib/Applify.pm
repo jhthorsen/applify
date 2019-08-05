@@ -176,7 +176,7 @@ OPTION:
     );
   }
 
-  print "notes:\n";
+  print "Notes:\n";
   print " * denotes a required option\n";
   print " + denotes an option that accepts multiple values\n";
   return $self;
