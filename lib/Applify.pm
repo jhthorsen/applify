@@ -170,12 +170,15 @@ OPTION:
 
     printf(
       " %s %2s%-${width}s  %s\n",
-      $option->{required} ? '*'  : ' ',
+      $option->{required} ? '*'  : $option->{n_of} ? '+' : ' ',
       length($name) > 1   ? '--' : '-',
       $name, $option->{documentation},
     );
   }
 
+  print "Notes:\n";
+  print " * denotes a required option\n";
+  print " + denotes an option that accepts multiple values\n";
   return $self;
 }
 
