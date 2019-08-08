@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More;
 
-my $app = eval 'use Applify; app {0};' or die $@;
+my $app    = eval 'use Applify; app {0};' or die $@;
 my $script = $app->_script;
 
 isa_ok $script->_option_parser, 'Getopt::Long::Parser';
@@ -22,7 +22,7 @@ like($@, qr{^Usage:.*documentation}, 'option() require documentation');
 $script->option(str => foo_bar => 'Foo can something');
 is_deeply(
   $script->options,
-  [{default => undef, type => 'str', name => 'foo_bar', documentation => 'Foo can something'}],
+  [{type => 'str', name => 'foo_bar', documentation => 'Foo can something'}],
   'add foo as option'
 );
 
@@ -48,9 +48,7 @@ is $script->_calculate_option_spec({name => 'a_b', type => 'num', n_of => '0,3'}
   is $script->_calculate_option_spec({name => 'a_b', type => 'dir'}),  'a-b=s', 'a_b=s';
 }
 
-eval {
-  $script->_calculate_option_spec({name => 'a_b', type => 'uri'});
-};
+eval { $script->_calculate_option_spec({name => 'a_b', type => 'uri'}); };
 like $@, qr/^Usage: option /, 'die on unsupported option type';
 
 
@@ -71,9 +69,9 @@ $script = $app->_script;
 my $instance = app_instance($script, qw{-input-file /tmp/test});
 is $instance->has_input_file, 1, 'Moose style';
 is !$instance->has_iii, 1, 'does not exist';
-is $instance->has_output_file, 1, 'default always exists';
-is $instance->has_template, 0, 'has_template not replaced see _sub()';
-is $instance->template, 'empty', 'default exists';
+is $instance->has_output_file, 1,       'default always exists';
+is $instance->has_template,    0,       'has_template not replaced see _sub()';
+is $instance->template,        'empty', 'default exists';
 
 sub app_instance {
   my $script = shift;

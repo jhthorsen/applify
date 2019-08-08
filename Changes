@@ -1,5 +1,9 @@
 Revision history for perl distribution Applify
 
+0.16 Not Released
+ - Fix "default" should be overridden when user specifies command line argument
+   (This might be a BREAKING change)
+
 0.15 2018-06-06T22:52:43+0800
  - Improved documentation
 

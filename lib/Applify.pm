@@ -10,45 +10,45 @@ use constant SUB_NAME_IS_AVAILABLE => $INC{'App/FatPacker/Trace.pm'}
 
 our $VERSION       = '0.15';
 our $PERLDOC       = 'perldoc';
-our $SUBCMD_PREFIX = "command";
-my $ANON = 1;
+our $SUBCMD_PREFIX = 'command';
+my $ANON = 0;
 
 sub app {
-  my $self   = shift;
-  my $code   = $self->{app} ||= shift;
-  my $parser = $self->_option_parser;
-  my (%options, @options_spec, $application_class, $app);
+  my $self = shift;
+  $self->{app} = shift if @_;
 
-  # has to be run before calculating option spec.
-  # cannot do ->can() as application_class isn't created yet.
-  if ($self->_subcommand_activate($ARGV[0])) { shift @ARGV; }
-  for my $option (@{$self->{options}}) {
-    my $options_key = $self->_attr_to_option($option->{name});
-    push @options_spec, $self->_calculate_option_spec($option);
-    $options{$options_key} = $option->{default}          if exists $option->{default};
-    $options{$options_key} = [@{$options{$options_key}}] if ref($options{$options_key}) eq 'ARRAY';
-  }
+  # Activate sub command
+  local @ARGV = @ARGV;
+  shift @ARGV if $self->_subcommand_activate($ARGV[0]);
 
-  unless ($parser->getoptions(\%options, @options_spec, $self->_default_options)) {
+  # Parse command line arguments
+  my $parsed_options
+    = $self->_option_parser->getoptions(\my %argv, (map { $self->_calculate_option_spec($_) } @{$self->options}),
+    $self->_default_options);
+
+  # Check if we should abort running the app based on user argv
+  if (!$parsed_options) {
     $self->_exit(1);
   }
-
-  if ($options{help}) {
+  elsif ($argv{help}) {
     $self->print_help;
     $self->_exit('help');
   }
-  elsif ($options{man}) {
+  elsif ($argv{man}) {
     system $PERLDOC => $self->documentation;
     $self->_exit($? >> 8);
   }
-  elsif ($options{version}) {
+  elsif ($argv{version}) {
     $self->print_version;
     $self->_exit('version');
   }
 
-  $application_class = $self->{application_class} ||= $self->_generate_application_class($code);
-  $app = $application_class->new(
-    {map { my $k = $self->_option_to_attr($_); $k => $self->_upgrade($k, $options{$_}) } keys %options});
+  # Create the application and run (or return) it
+  $self->{application_class} ||= $self->_generate_application_class;
+  my $app = $self->{application_class}->new(
+    (map { $self->_coerce($_->{name} => $_->{default}) } grep { exists $_->{default} } @{$self->options}),
+    (map { $self->_coerce($self->_option_to_attr($_), $argv{$_}) } keys %argv),
+  );
 
   return $app if defined wantarray;    # $app = do $script_file;
   $self->_exit($app->run(@ARGV));
@@ -113,21 +113,10 @@ sub option {
   my $type          = shift or die 'Usage: option $type => ...';
   my $name          = shift or die 'Usage: option $type => $name => ...';
   my $documentation = shift or die 'Usage: option $type => $name => $documentation, ...';
-  my ($default, %args);
 
-  if (@_ % 2) {
-    $default = shift;
-    %args    = @_;
-  }
-  else {
-    %args = @_;
-  }
-
-  if ($args{alias} and !ref $args{alias}) {
-    $args{alias} = [$args{alias}];
-  }
-
-  push @{$self->{options}}, {default => $default, %args, type => $type, name => $name, documentation => $documentation};
+  my %option = @_ % 2 ? (default => @_) : @_;
+  $option{alias} = [$option{alias}] if $option{alias} and !ref $option{alias};
+  push @{$self->options}, {%option, type => $type, name => $name, documentation => $documentation};
 
   return $self;
 }
@@ -136,7 +125,7 @@ sub options { $_[0]->{options} }
 
 sub print_help {
   my $self    = shift;
-  my @options = @{$self->{options}};
+  my @options = @{$self->options};
   my $width   = 0;
 
   push @options, {name => ''};
@@ -170,8 +159,8 @@ OPTION:
 
     printf(
       " %s %2s%-${width}s  %s\n",
-      $option->{required} ? '*'  : $option->{n_of} ? '+' : ' ',
-      length($name) > 1   ? '--' : '-',
+      $option->{required} ? '*' : $option->{n_of} ? '+' : ' ',
+      length($name) > 1 ? '--' : '-',
       $name, $option->{documentation},
     );
   }
@@ -183,7 +172,7 @@ OPTION:
 }
 
 sub print_version {
-  my $self = shift;
+  my $self    = shift;
   my $version = $self->version or die 'Cannot print version without version()';
 
   unless ($version =~ m!^\d!) {
@@ -205,6 +194,28 @@ sub version {
   return $_[0]->{version} if @_ == 1;
   $_[0]->{version} = $_[1] or die 'Usage: version $module_name|$num;';
   return $_[0];
+}
+
+sub _app_new {
+  my $app_class = shift;
+  return bless @_ ? @_ > 1 ? {@_} : {%{$_[0]}} : {}, ref $app_class || $app_class;
+}
+
+sub _app_run {
+  my ($app, @extra) = @_;
+  my $self = $app->_script;
+
+  my @missing = grep { $_->{required} && !exists $app->{$_->{name}} } @{$self->options};
+  if (@missing) {
+    my $missing = join ', ', map { '--' . $self->_attr_to_option($_->{name}) } @missing;
+    $self->print_help;
+    die "Required attribute missing: $missing\n";
+  }
+
+  # get subcommand code - which should have a registered subroutine
+  # or fallback to app {} block.
+  my $code = $self->_subcommand_code($app) || $self->{app};
+  return $app->$code(@extra);
 }
 
 sub _attr_to_option {
@@ -241,6 +252,15 @@ sub _calculate_option_spec {
   return $spec;
 }
 
+sub _coerce {
+  my ($self, $name, $input) = @_;
+  return ($name => $input) unless defined $input;
+
+  my ($option) = grep { $_->{name} eq $name } @{$self->options};
+  return ($name => $input) unless my $class = _load_class($option->{isa});
+  return ($name => ref $input eq 'ARRAY' ? [map { $class->new($_) } @$input] : $class->new($input));
+}
+
 sub _default_options {
   my $self = shift;
   my @default;
@@ -273,67 +293,42 @@ sub _exit {
 sub _generate_application_class {
   my ($self, $code) = @_;
   my $application_class = $self->{caller}[1];
-  my $extends = $self->{extends} || [];
-  my ($meta, @required);
+  my $extends           = $self->{extends} || [];
+  my $meta;
 
+  $ANON++;
   $application_class =~ s!\W!_!g;
   $application_class = join '::', ref($self), "__ANON__${ANON}__", $application_class;
-  $ANON++;
+  eval qq[package $application_class; use base qw(@$extends); 1] or die "Failed to generate application class: $@";
 
-  eval qq[
-    package $application_class;
-    use base qw(@$extends);
-    1;
-  ] or die "Failed to generate application class: $@";
+  _sub("$application_class\::new"     => \&_app_new) unless grep { $_->can('new') } @$extends;
+  _sub("$application_class\::run"     => \&_app_run);
+  _sub("$application_class\::_script" => sub {$self});
 
-  {
-    no strict 'refs';
-    _sub("$application_class\::new" => sub { my $class = shift; bless shift, $class })
-      unless grep { $_->can('new') } @$extends;
-    _sub("$application_class\::_script" => sub {$self});
-    _sub(
-      "$application_class\::run" => sub {
-        my ($app, @extra) = @_;
+  for ('app', $self->{caller}[0]) {
+    my $ns = do { no strict 'refs'; \%{"$_\::"} };
 
-        if (@required = grep { not defined $app->{$_} } @required) {
-          my $required = join ', ', map { '--' . $self->_attr_to_option($_) } @required;
-          $app->_script->print_help;
-          die "Required attribute missing: $required\n";
-        }
-
-        # get subcommand code - which should have a registered subroutine
-        # or fallback to app {} block.
-        $code = $app->_script->_subcommand_code($app) || $code;
-        return $app->$code(@extra);
-      }
-    );
-
-    for ('app', $self->{caller}[0]) {
-      my $ns = \%{"$_\::"};
-
-      for my $name (keys %$ns) {
-        $self->{skip_subs}{$name} and next;
-        my $code = eval { ref $ns->{$name} eq 'CODE' ? $ns->{$name} : *{$ns->{$name}}{CODE} } or next;
-        my $fqn = join '::', $application_class, $name;
-        _sub($fqn => $code);
-        delete $ns->{$name};    # may be a bit too destructive?
-      }
+    for my $name (keys %$ns) {
+      $self->{skip_subs}{$name} and next;
+      my $code = eval { ref $ns->{$name} eq 'CODE' ? $ns->{$name} : *{$ns->{$name}}{CODE} } or next;
+      my $fqn  = join '::', $application_class, $name;
+      _sub($fqn => $code);
+      delete $ns->{$name};    # may be a bit too destructive?
     }
+  }
 
-    $meta = $application_class->meta if $application_class->isa('Moose::Object') and $application_class->can('meta');
+  $meta = $application_class->meta if $application_class->isa('Moose::Object') and $application_class->can('meta');
 
-    for my $option (@{$self->{options}}) {
-      my $name = $option->{name};
-      if ($meta) {
-        $meta->add_attribute($name => {is => 'rw', default => $option->{default}});
-      }
-      else {
-        my $fqn = join '::', $application_class, $name;
-        _sub($fqn => sub { @_ == 2 and $_[0]->{$name} = $_[1]; $_[0]->{$name} });
-        $fqn = join '::', $application_class, join '_', has => $name;
-        _sub($fqn => sub { !!defined $_[0]->{$name} });
-      }
-      push @required, $name if $option->{required};
+  for my $option (@{$self->options}) {
+    my $name = $option->{name};
+    if ($meta) {
+      $meta->add_attribute($name => {is => 'rw', default => $option->{default}});
+    }
+    else {
+      my $accessor = join '::', $application_class, $name;
+      _sub($accessor => sub { @_ == 2 and $_[0]->{$name} = $_[1]; $_[0]->{$name} });
+      my $predicator = join '::', $application_class, join '_', has => $name;
+      _sub($predicator => sub { !!defined $_[0]->{$name} });
     }
   }
 
@@ -360,7 +355,7 @@ sub _option_to_attr {
 }
 
 sub _print_synopsis {
-  my $self = shift;
+  my $self          = shift;
   my $documentation = $self->documentation or return;
   my ($print, $classpath);
 
@@ -373,7 +368,7 @@ sub _print_synopsis {
   my $FH = $self->_documentation_class_handle($documentation, $classpath);
 
   while (<$FH>) {
-    last if $print and /^=(?:cut|head1)/;
+    last  if $print and /^=(?:cut|head1)/;
     print if $print;
     $print = 1 if /^=head1 SYNOPSIS/;
   }
@@ -405,15 +400,6 @@ sub _subcommand_code {
   my ($self, $app, $name) = (shift, shift);
   return undef unless $name = $self->subcommand;
   return $app->can("${SUBCMD_PREFIX}_${name}");
-}
-
-sub _upgrade {
-  my ($self, $name, $input) = @_;
-  return $input unless defined $input;
-
-  my ($option) = grep { $_->{name} eq $name } @{$self->{options}};
-  return $input unless my $class = _load_class($option->{isa});
-  return ref $input eq 'ARRAY' ? [map { $class->new($_) } @$input] : $class->new($input);
 }
 
 1;
@@ -680,7 +666,7 @@ Holds the application options given to L</option>.
 
 =head2 new
 
-  $self = $class->new({ options => $array_ref, ... });
+  $self = $class->new({options => $array_ref, ...});
 
 Object constructor. Creates a new object representing the script meta
 information.
