@@ -23,7 +23,7 @@ sub app {
 
   # Parse command line arguments
   my $parsed_options
-    = $self->_option_parser->getoptions(\my %argv, (map { $self->_calculate_option_spec($_) } @{$self->options}),
+    = $self->option_parser->getoptions(\my %argv, (map { $self->_calculate_option_spec($_) } @{$self->options}),
     $self->_default_options);
 
   # Check if we should abort running the app based on user argv
@@ -120,6 +120,15 @@ sub option {
   push @{$self->options}, {%option, type => $type, name => $name, documentation => $documentation};
 
   return $self;
+}
+
+sub option_parser {
+  my $self = shift;
+  return do { $self->{option_parser} = shift; $self } if @_;
+  return $self->{option_parser} ||= do {
+    require Getopt::Long;
+    Getopt::Long::Parser->new(config => [qw(no_auto_help no_auto_version pass_through)]);
+  };
 }
 
 sub options { $_[0]->{options} }
@@ -333,13 +342,6 @@ sub _load_class {
   my $class = shift or return undef;
   return $class if $class->can('new');
   return eval "require $class; 1" ? $class : "";
-}
-
-sub _option_parser {
-  $_[0]->{_option_parser} ||= do {
-    require Getopt::Long;
-    Getopt::Long::Parser->new(config => [qw(no_auto_help no_auto_version pass_through)]);
-  };
 }
 
 sub _print_synopsis {
@@ -643,6 +645,16 @@ application in void context (started from command line), but returns the
 application object in list/scalar context (from L<perlfunc/do>).
 
 =head1 ATTRIBUTES
+
+=head2 option_parser
+
+  $self = $self->option_parser(Getopt::Long::Parser->new);
+  $parser = $self->option_parser;
+
+You can specify your own option parser if you have special needs. The default
+is:
+
+  Getopt::Long::Parser->new(config => [qw(no_auto_help no_auto_version pass_through)]);
 
 =head2 options
 

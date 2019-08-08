@@ -5,11 +5,11 @@ use Test::More;
 my $app    = eval 'use Applify; app {0};' or die $@;
 my $script = $app->_script;
 
-isa_ok $script->_option_parser, 'Getopt::Long::Parser';
+isa_ok $script->option_parser, 'Getopt::Long::Parser';
 
 {
   local $TODO = 'need to define config for Getopt::Long';
-  is_deeply($script->_option_parser->{settings}, [qw(no_auto_help pass_through)], 'Getopt::Long has correct config');
+  is_deeply($script->option_parser->{settings}, [qw(no_auto_help pass_through)], 'Getopt::Long has correct config');
 }
 
 eval { $script->option(undef) };
