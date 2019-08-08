@@ -47,7 +47,7 @@ sub app {
   $self->{application_class} ||= $self->_generate_application_class;
   my $app = $self->{application_class}->new(
     (map { $self->_coerce($_->{name} => $_->{default}) } grep { exists $_->{default} } @{$self->options}),
-    (map { $self->_coerce($self->_option_to_attr($_), $argv{$_}) } keys %argv),
+    (map { $self->_coerce($_, $argv{$_}) } keys %argv),
   );
 
   return $app if defined wantarray;    # $app = do $script_file;
@@ -116,6 +116,7 @@ sub option {
 
   my %option = @_ % 2 ? (default => @_) : @_;
   $option{alias} = [$option{alias}] if $option{alias} and !ref $option{alias};
+  $option{arg}   = do { local $_ = $name; s!_!-!g; $_ } unless $option{arg};
   push @{$self->options}, {%option, type => $type, name => $name, documentation => $documentation};
 
   return $self;
@@ -155,13 +156,13 @@ OPTION:
 
 OPTION:
   for my $option (@options) {
-    my $name = $self->_attr_to_option($option->{name}) or do { print "\n"; next OPTION };
+    my $arg = $option->{arg} || $option->{name} or do { print "\n"; next OPTION };
 
     printf(
       " %s %2s%-${width}s  %s\n",
       $option->{required} ? '*' : $option->{n_of} ? '+' : ' ',
-      length($name) > 1 ? '--' : '-',
-      $name, $option->{documentation},
+      length($arg) > 0 ? '--' : '-',
+      $arg, $option->{documentation},
     );
   }
 
@@ -205,9 +206,8 @@ sub _app_run {
   my ($app, @extra) = @_;
   my $self = $app->_script;
 
-  my @missing = grep { $_->{required} && !exists $app->{$_->{name}} } @{$self->options};
-  if (@missing) {
-    my $missing = join ', ', map { '--' . $self->_attr_to_option($_->{name}) } @missing;
+  if (my @missing = grep { $_->{required} && !exists $app->{$_->{name}} } @{$self->options}) {
+    my $missing = join ', ', map {"--$_->{arg}"} @missing;
     $self->print_help;
     die "Required attribute missing: $missing\n";
   }
@@ -218,15 +218,9 @@ sub _app_run {
   return $app->$code(@extra);
 }
 
-sub _attr_to_option {
-  local $_ = $_[1] or return;
-  s!_!-!g;
-  $_;
-}
-
 sub _calculate_option_spec {
   my ($self, $option) = @_;
-  my $spec = $self->_attr_to_option($option->{name});
+  my $spec = join '|', $option->{name}, $option->{arg};
 
   if (ref $option->{alias} eq 'ARRAY') {
     $spec .= join '|', '', @{$option->{alias}};
@@ -346,12 +340,6 @@ sub _option_parser {
     require Getopt::Long;
     Getopt::Long::Parser->new(config => [qw(no_auto_help no_auto_version pass_through)]);
   };
-}
-
-sub _option_to_attr {
-  local $_ = $_[1] or return;
-  s!-!_!g;
-  $_;
 }
 
 sub _print_synopsis {
