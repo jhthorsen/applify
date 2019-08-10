@@ -128,6 +128,13 @@ determine if the ["option"](#option) has been set, either by a user or from the
 
     Used as description text when printing the usage text.
 
+- `$default`
+
+    Either a plain value or a code ref that can be used to generate a value.
+
+        option str => passwd => "Password file", "/etc/passwd";
+        option str => passwd => "Password file", sub { "/etc/passwd" };
+
 - `@args`
     - `alias`
 
@@ -146,12 +153,21 @@ determine if the ["option"](#option) has been set, either by a user or from the
 
     - `isa`
 
-        Specify the class an option should be instantiated as. Example:
+        Can be used to either specify a class that the value should be instantiated
+        as, or a [Type::Tiny](https://metacpan.org/pod/Type::Tiny) object that will be used for coercion and/or type
+        validation.
+
+        Example using a class:
 
             option file => output => "output file", isa => "Mojo::File";
 
         The `output()` attribute will then later return an object of [Mojo::File](https://metacpan.org/pod/Mojo::File),
         instead of just a plain string.
+
+        Example using [Type::Tiny](https://metacpan.org/pod/Type::Tiny):
+
+            use Types::Standard "Int";
+            option num => age => "Your age", isa => Int;
 
     - Other
 

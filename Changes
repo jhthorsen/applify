@@ -1,6 +1,6 @@
 Revision history for perl distribution Applify
 
-0.16 Not Released
+0.16 2019-08-10T14:39:05+0200
  - Fix "default" should be overridden when user specifies command line argument
    (This might be a BREAKING change for some)
  - Fix missing documentation regarding "alias"

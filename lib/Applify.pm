@@ -13,7 +13,7 @@ use constant SUB_NAME_IS_AVAILABLE => $INC{'App/FatPacker/Trace.pm'}
 our $INSTANTIATING = 0;
 our $PERLDOC       = 'perldoc';
 our $SUBCMD_PREFIX = 'command';
-our $VERSION       = '0.15';
+our $VERSION       = '0.16';
 my $ANON = 0;
 
 sub app {
@@ -443,7 +443,7 @@ Applify - Write object oriented scripts with ease
 
 =head1 VERSION
 
-0.15
+0.16
 
 =head1 DESCRIPTION
 
