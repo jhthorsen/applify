@@ -9,6 +9,8 @@ Revision history for perl distribution Applify
    Contributor: Roy Storey
  - Add "has_attribute" predicate methods #13
    Contributor: Roy Storey
+ - Add support for options with "isa" being a Type::Tiny object #15
+ - Add support for option's "default" being a code-ref
  - Allow --foo_bar as well as --foo-bar
 
 0.15 2018-06-06T22:52:43+0800

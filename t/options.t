@@ -33,6 +33,12 @@ $script->option(str => foo_3 => 'foo_3 can also something', 123, required => 1);
 is $script->options->[2]{default},  123, 'foo_3 has default value';
 is $script->options->[2]{required}, 1,   'foo_3 is required';
 
+$script->option(str => foo_4 => 'foo_4 can something else' => sub { });
+is ref($script->options->[3]{default}), 'CODE', 'foo_4 has default code';
+
+$script->option(str => foo_5 => 'foo_5 can something else', default => sub { });
+is ref($script->options->[4]{default}), 'CODE', 'foo_5 has default code';
+
 is $script->_calculate_option_spec({name => 'a_b', arg => 'a-b', type => 'bool'}), 'a_b|a-b!',  'a_b!';
 is $script->_calculate_option_spec({name => 'a_b', arg => 'a-b', type => 'flag'}), 'a_b|a-b!',  'a_b!';
 is $script->_calculate_option_spec({name => 'a_b', arg => 'a-b', type => 'inc'}),  'a_b|a-b+',  'a_b+';
@@ -70,8 +76,10 @@ $script = $app->_script;
 my $instance = app_instance($script, qw{-input-file /tmp/test});
 is $instance->has_input_file, 1, 'Moose style';
 is !$instance->has_iii, 1, 'does not exist';
-is $instance->has_output_file, 1,       'default always exists';
-is $instance->has_template,    0,       'has_template not replaced see _sub()';
+ok !$instance->has_output_file, 'default does not exist yet';
+$instance->output_file;
+ok $instance->has_output_file, 'default applied';
+is $instance->has_template,    0, 'has_template not replaced see _sub()';
 is $instance->template,        'empty', 'default exists';
 
 sub app_instance {

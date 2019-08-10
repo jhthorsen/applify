@@ -1,16 +1,19 @@
 package Applify;
 use strict;
 use warnings;
+
 use Carp           ();
 use File::Basename ();
+use Scalar::Util 'blessed';
 
 use constant SUB_NAME_IS_AVAILABLE => $INC{'App/FatPacker/Trace.pm'}
   ? 0    # this will be true when running under "fatpack"
   : eval 'use Sub::Name; 1' ? 1 : 0;
 
-our $VERSION       = '0.15';
+our $INSTANTIATING = 0;
 our $PERLDOC       = 'perldoc';
 our $SUBCMD_PREFIX = 'command';
+our $VERSION       = '0.15';
 my $ANON = 0;
 
 sub app {
@@ -21,7 +24,7 @@ sub app {
   local @ARGV = @ARGV;
   shift @ARGV if $self->_subcommand_activate($ARGV[0]);
 
-  # Parse command line arguments
+  # Parse command line options
   my $parsed_options
     = $self->option_parser->getoptions(\my %argv, (map { $self->_calculate_option_spec($_) } @{$self->options}),
     $self->_default_options);
@@ -44,11 +47,16 @@ sub app {
   }
 
   # Create the application and run (or return) it
-  $self->{application_class} ||= $self->_generate_application_class;
-  my $app = $self->{application_class}->new(
-    (map { $self->_coerce($_->{name} => $_->{default}) } grep { exists $_->{default} } @{$self->options}),
-    (map { $self->_coerce($_, $argv{$_}) } keys %argv),
-  );
+  local $INSTANTIATING = 1;
+  my $app = eval {
+    $self->{application_class} ||= $self->_generate_application_class;
+    $self->{application_class}->new(\%argv);
+  } or do {
+    $@ =~ s!\sat\s.*!!s unless $ENV{APPLIFY_VERBOSE};
+    $self->print_help;
+    local $! = 1;    # exit value
+    die "\nInvalid input:\n\n$@\n";
+  };
 
   return $app if defined wantarray;    # $app = do $script_file;
   $self->_exit($app->run(@ARGV));
@@ -170,7 +178,7 @@ OPTION:
     printf(
       " %s %2s%-${width}s  %s\n",
       $option->{required} ? '*' : $option->{n_of} ? '+' : ' ',
-      length($arg) > 0 ? '--' : '-',
+      _option_with_dashes($arg),
       $arg, $option->{documentation},
     );
   }
@@ -207,8 +215,10 @@ sub version {
 }
 
 sub _app_new {
-  my $app_class = shift;
-  return bless @_ ? @_ > 1 ? {@_} : {%{$_[0]}} : {}, ref $app_class || $app_class;
+  my $self  = bless {}, shift;
+  my $attrs = ref $_[0] eq 'HASH' ? shift : {@_};
+  $self->$_($attrs->{$_}) for grep { $self->can($_) } keys %$attrs;
+  return $self;
 }
 
 sub _app_run {
@@ -216,7 +226,7 @@ sub _app_run {
   my $self = $app->_script;
 
   if (my @missing = grep { $_->{required} && !exists $app->{$_->{name}} } @{$self->options}) {
-    my $missing = join ', ', map {"--$_->{arg}"} @missing;
+    my $missing = join ', ', map { _option_with_dashes($_->{arg}) } @missing;
     $self->print_help;
     die "Required attribute missing: $missing\n";
   }
@@ -244,24 +254,17 @@ sub _calculate_option_spec {
   elsif ($option->{type} =~ /^dir/)            { $spec .= '=s' }    # TODO
   else                                         { die 'Usage: option {bool|flag|inc|str|int|num|file|dir} ...' }
 
+  # Let Types::Type handle the validation
+  if (blessed $option->{isa}) {
+    $spec =~ s!=\w$!=s!;
+  }
+
   if (my $n_of = $option->{n_of}) {
     $spec .= $n_of eq '@' ? $n_of : "{$n_of}";
-    $option->{default}
-      and ref $option->{default} ne 'ARRAY'
-      and die 'Usage option ... default => [Need to be an array ref]';
     $option->{default} ||= [];
   }
 
   return $spec;
-}
-
-sub _coerce {
-  my ($self, $name, $input) = @_;
-  return ($name => $input) unless defined $input;
-
-  my ($option) = grep { $_->{name} eq $name } @{$self->options};
-  return ($name => $input) unless my $class = _load_class($option->{isa});
-  return ($name => ref $input eq 'ARRAY' ? [map { $class->new($_) } @$input] : $class->new($input));
 }
 
 sub _default_options {
@@ -293,11 +296,42 @@ sub _exit {
   exit $reason;
 }
 
+sub _generate_attribute_accessor {
+  my ($self, $args) = @_;
+  my $default = ref $args->{default} eq 'CODE' ? $args->{default} : sub { $args->{default} };
+  my $isa     = $args->{isa};
+  my $name    = $args->{name};
+
+  if (blessed $isa and $isa->can('check')) {
+    my $assert_method = $isa->has_coercion ? 'assert_coerce'    : 'assert_return';
+    my $prefix        = $isa->has_coercion ? 'Could not coerce' : 'Failed check for';
+    return sub {
+      @_ == 1 && return exists $_[0]{$name} ? $_[0]{$name} : ($_[0]{$name} = $_[0]->$default);
+      eval { $_[0]{$name} = $isa->$assert_method($_[1]); 1 } or do {
+        my $human = $INSTANTIATING ? _option_with_dashes($args->{arg}) : qq("$name");
+        die qq($prefix $human: $@);
+      };
+    };
+  }
+  elsif (my $class = _load_class($isa)) {
+    return sub {
+      @_ == 1 && exists $_[0]{$name} && return $_[0]{$name};
+      my $val = @_ > 1 ? $_[1] : $_[0]->$default;
+      $_[0]{$name} = ref $val eq 'ARRAY' ? [map { $class->new($_) } @$val] : $class->new($val);
+    };
+  }
+  else {
+    return sub {
+      @_ == 1 && return exists $_[0]{$name} ? $_[0]{$name} : ($_[0]{$name} = $_[0]->$default);
+      $_[0]{$name} = $_[1];
+    };
+  }
+}
+
 sub _generate_application_class {
   my ($self, $code) = @_;
   my $application_class = $self->{caller}[1];
   my $extends           = $self->{extends} || [];
-  my $meta;
 
   $ANON++;
   $application_class =~ s!\W!_!g;
@@ -320,16 +354,19 @@ sub _generate_application_class {
     }
   }
 
-  $meta = $application_class->meta if $application_class->isa('Moose::Object') and $application_class->can('meta');
+  my $meta = $application_class->meta if $application_class->isa('Moose::Object') and $application_class->can('meta');
 
   for my $option (@{$self->options}) {
     my $name = $option->{name};
     if ($meta) {
-      $meta->add_attribute($name => {is => 'rw', default => $option->{default}});
+      my %attr_options = (is => 'rw', predicate => 1, required => $option->{required});
+      $attr_options{default} = $option->{default} if $option->{default};
+      $attr_options{isa}     = $option->{isa}     if $option->{isa};
+      $meta->add_attribute($name => \%attr_options) unless $meta->find_attribute_by_name($name);
     }
     else {
       my $accessor = join '::', $application_class, $name;
-      _sub($accessor => sub { @_ == 2 and $_[0]->{$name} = $_[1]; $_[0]->{$name} });
+      _sub($accessor => $self->_generate_attribute_accessor($option));
       my $predicator = join '::', $application_class, join '_', has => $name;
       _sub($predicator => sub { !!defined $_[0]->{$name} });
     }
@@ -343,6 +380,8 @@ sub _load_class {
   return $class if $class->can('new');
   return eval "require $class; 1" ? $class : "";
 }
+
+sub _option_with_dashes { length($_[0]) > 1 ? "--$_[0]" : "-$_[0]" }
 
 sub _print_synopsis {
   my $self          = shift;
@@ -532,6 +571,13 @@ inside the application. Example:
 
 Used as description text when printing the usage text.
 
+=item * C<$default>
+
+Either a plain value or a code ref that can be used to generate a value.
+
+  option str => passwd => "Password file", "/etc/passwd";
+  option str => passwd => "Password file", sub { "/etc/passwd" };
+
 =item * C<@args>
 
 =over 2
@@ -553,12 +599,21 @@ See L<Getopt::Long/Options-with-multiple-values> for details.
 
 =item * C<isa>
 
-Specify the class an option should be instantiated as. Example:
+Can be used to either specify a class that the value should be instantiated
+as, or a L<Type::Tiny> object that will be used for coercion and/or type
+validation.
+
+Example using a class:
 
   option file => output => "output file", isa => "Mojo::File";
 
 The C<output()> attribute will then later return an object of L<Mojo::File>,
 instead of just a plain string.
+
+Example using L<Type::Tiny>:
+
+  use Types::Standard "Int";
+  option num => age => "Your age", isa => Int;
 
 =item * Other
 
