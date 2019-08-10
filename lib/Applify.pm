@@ -107,8 +107,8 @@ sub import {
 }
 
 sub new {
-  my ($class, $args) = @_;
-  my $self = bless $args, $class;
+  my $class = shift;
+  my $self  = bless @_ ? @_ > 1 ? {@_} : {%{$_[0]}} : {}, ref $class || $class;
 
   $self->{options} ||= [];
   $self->{caller} or die 'Usage: $self->new({ caller => [...], ... })';
@@ -171,15 +171,17 @@ OPTION:
     print "\noptions:\n";
   }
 
+  $width += 2;
+
 OPTION:
   for my $option (@options) {
     my $arg = $option->{arg} || $option->{name} or do { print "\n"; next OPTION };
 
     printf(
-      " %s %2s%-${width}s  %s\n",
+      " %s %-${width}s  %s\n",
       $option->{required} ? '*' : $option->{n_of} ? '+' : ' ',
       _option_with_dashes($arg),
-      $arg, $option->{documentation},
+      $option->{documentation},
     );
   }
 
@@ -297,10 +299,10 @@ sub _exit {
 }
 
 sub _generate_attribute_accessor {
-  my ($self, $args) = @_;
-  my $default = ref $args->{default} eq 'CODE' ? $args->{default} : sub { $args->{default} };
-  my $isa     = $args->{isa};
-  my $name    = $args->{name};
+  my ($self, $option) = @_;
+  my $default = ref $option->{default} eq 'CODE' ? $option->{default} : sub { $option->{default} };
+  my $isa     = $option->{isa};
+  my $name    = $option->{name};
 
   if (blessed $isa and $isa->can('check')) {
     my $assert_method = $isa->has_coercion ? 'assert_coerce'    : 'assert_return';
@@ -308,7 +310,7 @@ sub _generate_attribute_accessor {
     return sub {
       @_ == 1 && return exists $_[0]{$name} ? $_[0]{$name} : ($_[0]{$name} = $_[0]->$default);
       eval { $_[0]{$name} = $isa->$assert_method($_[1]); 1 } or do {
-        my $human = $INSTANTIATING ? _option_with_dashes($args->{arg}) : qq("$name");
+        my $human = $INSTANTIATING ? _option_with_dashes($option->{arg}) : qq("$name");
         die qq($prefix $human: $@);
       };
     };
