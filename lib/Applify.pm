@@ -319,7 +319,7 @@ sub _generate_attribute_accessor {
     return sub {
       @_ == 1 && exists $_[0]{$name} && return $_[0]{$name};
       my $val = @_ > 1 ? $_[1] : $_[0]->$default;
-      $_[0]{$name} = ref $val eq 'ARRAY' ? [map { $class->new($_) } @$val] : $class->new($val);
+      $_[0]{$name} = ref $val eq 'ARRAY' ? [map { $class->new($_) } @$val] : defined($val) ? $class->new($val) : undef;
     };
   }
   else {
