@@ -53,7 +53,7 @@ sub app {
     $self->{application_class}->new(\%argv);
   } or do {
     $@ =~ s!\sat\s.*!!s unless $ENV{APPLIFY_VERBOSE};
-    $self->print_help;
+    { local $@; $self->print_help; }
     local $! = 1;    # exit value
     die "\nInvalid input:\n\n$@\n";
   };

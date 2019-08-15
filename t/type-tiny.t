@@ -15,7 +15,7 @@ HERE
 
 {
   no warnings qw(once redefine);
-  *Applify::print_help = sub { $main::help++ };
+  *Applify::print_help = sub { eval { $main::help++ } };
 }
 
 my $script = $app->_script;
