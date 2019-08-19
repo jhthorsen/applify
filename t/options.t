@@ -2,9 +2,12 @@ use warnings;
 use strict;
 use Test::More;
 
-my $app    = eval 'use Applify; app {0};' or die $@;
+our $APP_SCRIPT;
+my $app    = eval 'use Applify; $main::APP_SCRIPT = $SCRIPT; app {0};' or die $@;
 my $script = $app->_script;
 
+is $APP_SCRIPT, $script, '$SCRIPT is exported';
+is $APP_SCRIPT->option_parser, $script->option_parser, 'option_parser can be changed';
 isa_ok $script->option_parser, 'Getopt::Long::Parser';
 
 {

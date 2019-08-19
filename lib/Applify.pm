@@ -92,7 +92,7 @@ sub import {
     $self->{'skip_subs'}{$name} = 1;
   }
 
-  for my $k (qw(app extends option version documentation subcommand)) {
+  for my $k (qw(app extends option version documentation subcommand SCRIPT)) {
     my $name = $args{$k} // $k;
     next unless $name;
     $export{$k} = $name =~ /::/ ? $name : "$caller[0]\::$name";
@@ -105,6 +105,7 @@ sub import {
   *{$export{documentation}} = sub     { $self->documentation(@_) };
   *{$export{extends}}       = sub     { $self->extends(@_) };
   *{$export{subcommand}}    = sub     { $self->subcommand(@_) };
+  *{$export{SCRIPT}}        = \$self;
 }
 
 sub new {
@@ -516,6 +517,15 @@ is refered to as C<$script> in this documentation.
 
 NOTE: This accessor starts with an underscore to prevent conflicts
 with L</options>.
+
+The <$script> object is also exported as a package variable with the name
+C<$SCRIPT>, allowing you to change attributes before the L</app> block is
+called. Example:
+
+  use Applify;
+  $SCRIPT->option_parser(
+    Getopt::Long::Parser->new(config => [qw(no_auto_help no_auto_version)]));
+  app {};
 
 =item * Other accessors
 
