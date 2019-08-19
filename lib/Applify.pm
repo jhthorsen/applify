@@ -48,6 +48,7 @@ sub app {
 
   # Create the application and run (or return) it
   local $INSTANTIATING = 1;
+  local $@;
   my $app = eval {
     $self->{application_class} ||= $self->_generate_application_class;
     $self->{application_class}->new(\%argv);
@@ -196,6 +197,7 @@ sub print_version {
   my $version = $self->version or die 'Cannot print version without version()';
 
   unless ($version =~ m!^\d!) {
+    local $@;
     eval "require $version; 1" or die "Could not load $version: $@";
     $version = $version->VERSION;
   }
@@ -338,6 +340,7 @@ sub _generate_application_class {
   $ANON++;
   $application_class =~ s!\W!_!g;
   $application_class = join '::', ref($self), "__ANON__${ANON}__", $application_class;
+  local $@;
   eval qq[package $application_class; use base qw(@$extends); 1] or die "Failed to generate application class: $@";
 
   _sub("$application_class\::new"     => \&_app_new) unless grep { $_->can('new') } @$extends;
@@ -380,6 +383,7 @@ sub _generate_application_class {
 sub _load_class {
   my $class = shift or return undef;
   return $class if $class->can('new');
+  local $@;
   return eval "require $class; 1" ? $class : "";
 }
 
@@ -391,7 +395,8 @@ sub _print_synopsis {
   my ($print, $classpath);
 
   unless (-e $documentation) {
-    eval "use $documentation; 1" or die "Could not load $documentation: $@";
+    local $@;
+    eval "require $documentation; 1" or die "Could not load $documentation: $@";
     $documentation =~ s!::!/!g;
     $documentation = $INC{$classpath = "$documentation.pm"};
   }
