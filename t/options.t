@@ -7,10 +7,9 @@ my $script = $app->_script;
 
 isa_ok $script->option_parser, 'Getopt::Long::Parser';
 
-{
-  local $TODO = 'need to define config for Getopt::Long';
-  is_deeply($script->option_parser->{settings}, [qw(no_auto_help pass_through)], 'Getopt::Long has correct config');
-}
+getopt_long_config_ok($script->option_parser,
+  [qw(no_auto_help no_auto_version pass_through)],
+  'Getopt::Long has correct config');
 
 eval { $script->option(undef) };
 like($@, qr{^Usage:.*type =>}, 'option() require type');
@@ -87,6 +86,12 @@ sub app_instance {
   local @ARGV = @_;
   my $app = $script->app;
   return $app;
+}
+
+sub getopt_long_config_ok {
+  my ($parser, $expected, $desc) = @_;
+  my $save = Getopt::Long::Configure(@$expected);
+  return is_deeply($parser->{settings}, Getopt::Long::Configure($save), $desc);
 }
 
 done_testing;
