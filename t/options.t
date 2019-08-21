@@ -11,6 +11,16 @@ getopt_long_config_ok($script->option_parser,
   [qw(no_auto_help no_auto_version pass_through)],
   'Getopt::Long has correct config');
 
+$app    =
+  eval 'use Applify getopt_config => [qw(bundling no_pass_through)]; app {0};' or die $@;
+$script = $app->_script;
+
+isa_ok $script->option_parser, 'Getopt::Long::Parser';
+
+getopt_long_config_ok($script->option_parser,
+  [qw(no_auto_help no_auto_version bundling no_pass_through)],
+  'Getopt::Long has correct config');
+
 eval { $script->option(undef) };
 like($@, qr{^Usage:.*type =>}, 'option() require type');
 eval { $script->option(str => undef) };

@@ -87,6 +87,9 @@ sub import {
 
   $self->{skip_subs} = {app => 1, option => 1, version => 1, documentation => 1, extends => 1, subcommand => 1};
 
+  $self->option_parser->configure(@{delete $args{getopt_config}})
+    if $args{getopt_config};
+
   no strict 'refs';
   for my $name (keys %$ns) {
     $self->{'skip_subs'}{$name} = 1;
@@ -757,6 +760,19 @@ a normalized matter. Example:
 
 Will export the functions listed under L</EXPORTED FUNCTIONS>. The functions
 will act on a L<Applify> object created by this method.
+
+Additionally, C<import> accepts the following named arguments with the following
+names:
+
+=over 4
+
+=item getopt_config
+
+An array reference that must contain configure options for L<Getopt::Long|Getopt::Long/Configure>.
+
+  use Applify getopt_config => [qw(no_auto_help no_pass_through)];
+
+=back
 
 =head1 COPYRIGHT & LICENSE
 
