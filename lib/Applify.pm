@@ -24,13 +24,19 @@ sub app {
   local @ARGV = @ARGV;
   shift @ARGV if $self->_subcommand_activate($ARGV[0]);
 
-  # Parse command line options
-  my $parsed_options
-    = $self->option_parser->getoptions(\my %argv, (map { $self->_calculate_option_spec($_) } @{$self->options}),
-    $self->_default_options);
+  my (%argv, @spec);
+  for my $option (@{$self->options}, @{$self->_default_options}) {
+    push @spec, $self->_calculate_option_spec($option);
+    $argv{$option->{name}} = $option->{n_of} ? [] : undef;
+  }
+
+  my $got_valid_options = $self->option_parser->getoptions(\%argv, @spec);
+
+  # Remove default $argv{foo} = [] and $argv{bar} = undef
+  delete $argv{$_} for grep { !defined $argv{$_} || ref $argv{$_} eq 'ARRAY' && !@{$argv{$_}} } keys %argv;
 
   # Check if we should abort running the app based on user argv
-  if (!$parsed_options) {
+  if (!$got_valid_options) {
     $self->_exit(1);
   }
   elsif ($argv{help}) {
@@ -126,6 +132,8 @@ sub option {
   my %option = @_ % 2 ? (default => @_) : @_;
   $option{alias} = [$option{alias}] if $option{alias} and !ref $option{alias};
   $option{arg}   = do { local $_ = $name; s!_!-!g; $_ } unless $option{arg};
+  $option{default} //= !!0 if $type eq 'bool';
+
   push @{$self->options}, {%option, type => $type, name => $name, documentation => $documentation};
 
   return $self;
@@ -134,9 +142,12 @@ sub option {
 sub option_parser {
   my $self = shift;
   return do { $self->{option_parser} = shift; $self } if @_;
+
+  my @config = qw(no_auto_help no_auto_version pass_through);
+  push @config, 'debug' if $ENV{APPLIFY_DEBUG};
   return $self->{option_parser} ||= do {
     require Getopt::Long;
-    Getopt::Long::Parser->new(config => [qw(no_auto_help no_auto_version pass_through)]);
+    Getopt::Long::Parser->new(config => \@config);
   };
 }
 
@@ -144,14 +155,8 @@ sub options { $_[0]->{options} }
 
 sub print_help {
   my $self    = shift;
-  my @options = @{$self->options};
+  my @options = (@{$self->options}, {}, @{$self->_default_options}, {});
   my $width   = 0;
-
-  push @options, {name => ''};
-  push @options, {name => 'help', documentation => 'Print this help text'};
-  push @options, {name => 'man', documentation => 'Display manual for this application'} if $self->documentation;
-  push @options, {name => 'version', documentation => 'Print application name and version'} if $self->version;
-  push @options, {name => ''};
 
   $self->_print_synopsis;
 
@@ -176,7 +181,7 @@ OPTION:
 
 OPTION:
   for my $option (@options) {
-    my $arg = $option->{arg} || $option->{name} or do { print "\n"; next OPTION };
+    my $arg = $option->{arg} or do { print "\n"; next OPTION };
 
     printf(
       " %s %-${width}s  %s\n",
@@ -243,11 +248,10 @@ sub _app_run {
 
 sub _calculate_option_spec {
   my ($self, $option) = @_;
-  my $spec = join '|', $option->{name}, $option->{arg};
 
-  if (ref $option->{alias} eq 'ARRAY') {
-    $spec .= join '|', '', @{$option->{alias}};
-  }
+  my $spec = $option->{name};
+  $spec .= "|$option->{arg}" if $option->{name} ne $option->{arg};
+  $spec .= join '|', '', @{$option->{alias}} if ref $option->{alias} eq 'ARRAY';
 
   if    ($option->{type} =~ /^(?:bool|flag)/i) { $spec .= '!' }
   elsif ($option->{type} =~ /^inc/)            { $spec .= '+' }
@@ -275,11 +279,11 @@ sub _default_options {
   my $self = shift;
   my @default;
 
-  push @default, 'help';
-  push @default, 'man' if $self->documentation;
-  push @default, 'version' if $self->version;
+  push @default, {name => 'help',    documentation => 'Print this help text'};
+  push @default, {name => 'man',     documentation => 'Display manual for this application'} if $self->documentation;
+  push @default, {name => 'version', documentation => 'Print application name and version'} if $self->version;
 
-  return @default;
+  return [map { $_->{type} = 'bool'; $_->{arg} = $_->{name}; $_ } @default];
 }
 
 sub _documentation_class_handle {
