@@ -25,6 +25,8 @@ sub app {
   shift @ARGV if $self->_subcommand_activate($ARGV[0]);
 
   my (%argv, @spec);
+  $self->_run_hook(before_options_parsing => \@ARGV);
+
   for my $option (@{$self->options}, @{$self->_default_options}) {
     push @spec, $self->_calculate_option_spec($option);
     $argv{$option->{name}} = $option->{n_of} ? [] : undef;
@@ -81,6 +83,12 @@ sub extends {
   return $self;
 }
 
+sub hook {
+  my ($self, $name, $cb) = @_;
+  push @{$self->{hook}{$name}}, $cb;
+  return $self;
+}
+
 sub import {
   my ($class, %args) = @_;
   my @caller = caller;
@@ -91,14 +99,11 @@ sub import {
   strict->import;
   warnings->import;
 
-  $self->{skip_subs} = {app => 1, option => 1, version => 1, documentation => 1, extends => 1, subcommand => 1};
-
   no strict 'refs';
-  for my $name (keys %$ns) {
-    $self->{'skip_subs'}{$name} = 1;
-  }
+  $self->{skip_subs}{$_} = 1 for keys %$ns;
 
-  for my $k (qw(app extends option version documentation subcommand)) {
+  for my $k (qw(app extends hook option version documentation subcommand)) {
+    $self->{skip_subs}{$k} = 1;
     my $name = $args{$k} // $k;
     next unless $name;
     $export{$k} = $name =~ /::/ ? $name : "$caller[0]\::$name";
@@ -106,6 +111,7 @@ sub import {
 
   no warnings 'redefine';    # need to allow redefine when loading a new app
   *{$export{app}}           = sub (&) { $self->app(@_) };
+  *{$export{hook}}          = sub     { $self->hook(@_) };
   *{$export{option}}        = sub     { $self->option(@_) };
   *{$export{version}}       = sub     { $self->version(@_) };
   *{$export{documentation}} = sub     { $self->documentation(@_) };
@@ -299,8 +305,9 @@ sub _documentation_class_handle {
 
 sub _exit {
   my ($self, $reason) = @_;
-  exit 0 unless ($reason =~ /^\d+$/);    # may change without warning...
-  exit $reason;
+  my $exit_value = $reason =~ /^\d+$/ ? $reason : 0;
+  $self->_run_hook(before_exit => $exit_value);
+  exit $exit_value;
 }
 
 sub _generate_attribute_accessor {
@@ -411,6 +418,12 @@ sub _print_synopsis {
     print if $print;
     $print = 1 if /^=head1 SYNOPSIS/;
   }
+}
+
+sub _run_hook {
+  my ($self, $name, @args) = @_;
+  return unless my $cbs = $self->{hook}{$name};
+  for my $cb (@$cbs) { $self->$cb(@args) }
 }
 
 sub _sub {
@@ -657,6 +670,32 @@ C<--version> option to your script.
 
 Specify which classes this application should inherit from. These
 classes can be L<Moose> based.
+
+=head2 hook
+
+  hook before_exit            => sub { my ($script, $exit_value) = @_ };
+  hook before_options_parsing => sub { my ($script, $argv) = @_ };
+
+Defines a hook to run.
+
+=over 2
+
+=item * before_exit
+
+Called right before C<exit($exit_value)> is called by L<Applify>. Note that
+this hook will not be called if an exception is thrown.
+
+=item * before_options_parsing
+
+Called right before C<$argv> is parsed by L</option_parser>. C<$argv> is an
+array-ref of the raw options given to your application. This hook allows you
+to modify L</option_parser>. Example:
+
+  hook before_options_parsing => sub {
+    shift->option_parser->configure(bundling no_pass_through);
+  };
+
+=back
 
 =head2 subcommand
 
