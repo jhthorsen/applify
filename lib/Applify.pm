@@ -157,6 +157,7 @@ sub print_help {
   my $self    = shift;
   my @options = (@{$self->options}, {}, @{$self->_default_options}, {});
   my $width   = 0;
+  my %notes;
 
   $self->_print_synopsis;
 
@@ -172,9 +173,9 @@ OPTION:
     my $subcmds = [sort { $a->{name} cmp $b->{name} } values %{$self->{subcommands}}];
     my ($width) = sort { $b <=> $a } map { length($_->{name}) } @$subcmds;
     print "\n    ", File::Basename::basename($0), " [command] [options]\n";
-    print "\ncommands:\n";
+    print "\nCommands:\n";
     printf("    %-${width}s  %s\n", @{$_}{'name', 'desc'}) for @$subcmds;
-    print "\noptions:\n";
+    print "\nOptions:\n";
   }
 
   $width += 2;
@@ -182,18 +183,16 @@ OPTION:
 OPTION:
   for my $option (@options) {
     my $arg = $option->{arg} or do { print "\n"; next OPTION };
-
-    printf(
-      " %s %-${width}s  %s\n",
-      $option->{required} ? '*' : $option->{n_of} ? '+' : ' ',
-      _option_with_dashes($arg),
-      $option->{documentation},
-    );
+    my $prefix
+      = ($option->{required} and $option->{n_of}) ? '++' : $option->{required} ? '*' : $option->{n_of} ? '+' : '';
+    $notes{$prefix}++ if $prefix;
+    printf " %-2s %-${width}s  %s\n", $prefix, _option_with_dashes($arg), $option->{documentation};
   }
 
-  print "Notes:\n";
-  print " * denotes a required option\n";
-  print " + denotes an option that accepts multiple values\n";
+  print "Notes:\n"                                                             if %notes;
+  print " *  denotes a required option\n"                                      if $notes{'*'};
+  print " +  denotes an option that accepts multiple values\n"                 if $notes{'+'};
+  print " ++ denotes an option that accepts multiple values and is required\n" if $notes{'++'};
   return $self;
 }
 
