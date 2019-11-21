@@ -169,7 +169,7 @@ sub print_help {
 
 OPTION:
   for my $option (@options) {
-    my $length = length $option->{name};
+    my $length = length($option->{name} || '');
     $width = $length if $width < $length;
   }
 
