@@ -10,7 +10,7 @@ my %WriteMakefileArgs = (
   EXE_FILES      => [qw()],
   BUILD_REQUIRES => {},
   TEST_REQUIRES  => {'Test::More' => '0.88'},
-  PREREQ_PM      => {'Cwd' => '0', 'File::Basename' => '0', 'Getopt::Long' => '0', 'perl' => '5.010001'},
+  PREREQ_PM      => {'Cwd' => '0', 'File::Basename' => '0', 'Getopt::Long' => '0', 'perl' => '5.014004'},
   META_MERGE     => {
     'dynamic_config' => 0,
     'meta-spec'      => {version => 2},
