@@ -412,9 +412,15 @@ sub _print_synopsis {
   }
 
   my $FH = $self->_documentation_class_handle($documentation, $classpath);
-
+  my $enc = '';
+  
   while (<$FH>) {
     last  if $print and /^=(?:cut|head1)/;
+    $enc = $1 if /^=encoding\s+(\S+)/;
+    if ($enc) {
+      binmode $FH, ":$enc";
+      $enc = '';
+    }
     print if $print;
     $print = 1 if /^=head1 SYNOPSIS/;
   }
