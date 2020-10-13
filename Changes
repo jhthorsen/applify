@@ -1,5 +1,8 @@
 Revision history for perl distribution Applify
 
+0.22 Not Released
+ - Fix "predicate" in a moose attribute must be a method name
+
 0.21 2019-12-12T22:03:18+0100
  - Require Perl 5.14.4 #29
 
