@@ -8,6 +8,7 @@ my %WriteMakefileArgs = (
   ABSTRACT_FROM  => 'lib/Applify.pm',
   VERSION_FROM   => 'lib/Applify.pm',
   EXE_FILES      => [qw()],
+  OBJECT         => '',
   BUILD_REQUIRES => {},
   TEST_REQUIRES  => {'Test::More' => '0.88'},
   PREREQ_PM      => {'Cwd' => '0', 'File::Basename' => '0', 'Getopt::Long' => '0', 'perl' => '5.014004'},
