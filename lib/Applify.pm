@@ -353,8 +353,8 @@ sub _generate_application_class {
   local $@;
   eval qq[package $application_class; use base qw(@$extends); 1] or die "Failed to generate application class: $@";
 
-  _sub("$application_class\::new"     => \&_app_new) unless grep { $_->can('new') } @$extends;
-  _sub("$application_class\::run"     => \&_app_run);
+  _sub("$application_class\::new"     => sub { $self->can('_app_new')->(@_) } ) unless grep { $_->can('new') } @$extends;
+  _sub("$application_class\::run"     => sub { $self->can('_app_run')->(@_) } );
   _sub("$application_class\::_script" => sub {$self});
 
   for ('app', $self->{caller}[0]) {
