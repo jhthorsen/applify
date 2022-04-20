@@ -50,7 +50,7 @@ is $script->_calculate_option_spec({name => 'a_b', arg => 'a-b', type => 'num', 
   is $script->_calculate_option_spec({name => 'a_b', arg => 'a-b', type => 'dir'}),  'a_b|a-b=s', 'a_b=s';
 }
 
-eval { $script->_calculate_option_spec({name => 'a_b', type => 'uri'}); };
+eval { $script->_calculate_option_spec({name => 'a_b', arg => 'a-b', type => 'uri'}); };
 like $@, qr/^Usage: option /, 'die on unsupported option type';
 
 
