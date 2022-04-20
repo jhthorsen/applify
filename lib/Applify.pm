@@ -165,7 +165,12 @@ sub print_help {
   my $width   = 0;
   my %notes;
 
-  $self->_print_synopsis;
+  # application help, or subcommand help?
+  my $app_help = ! defined $self->{subcommand};
+
+  if ( $app_help ) {
+      $self->_print_synopsis;
+  }
 
 OPTION:
   for my $option (@options) {
@@ -175,13 +180,21 @@ OPTION:
 
   print "Usage:\n";
 
-  if (%{$self->{subcommands} || {}}) {
-    my $subcmds = [sort { $a->{name} cmp $b->{name} } values %{$self->{subcommands}}];
-    my ($width) = sort { $b <=> $a } map { length($_->{name}) } @$subcmds;
-    print "\n    ", File::Basename::basename($0), " [command] [options]\n";
-    print "\nCommands:\n";
-    printf("    %-${width}s  %s\n", @{$_}{'name', 'desc'}) for @$subcmds;
-    print "\nOptions:\n";
+  if ( $app_help  ) {
+
+    if (%{$self->{subcommands} || {}}) {
+      my $subcmds = [sort { $a->{name} cmp $b->{name} } values %{$self->{subcommands}}];
+      my ($width) = sort { $b <=> $a } map { length($_->{name}) } @$subcmds;
+      print "\n    ", File::Basename::basename($0), " [command] [options]\n";
+      print "\nCommands:\n";
+      printf("    %-${width}s  %s\n", @{$_}{'name', 'desc'}) for @$subcmds;
+      print "\nOptions:\n";
+    }
+
+  }
+  else {
+      print "\n    ", File::Basename::basename($0), " ", $self->{subcommand}, " [options]\n";
+      print "\nOptions:\n";
   }
 
   $width += 2;
