@@ -50,6 +50,10 @@ is_deeply $script->_default_options,
   [{arg => 'help', documentation => 'Print this help text', name => 'help', type => 'bool'}], 'default options';
 is_help $script, <<'HERE', 'only help';
 Usage:
+
+    help.t [options]
+
+Options:
     --foo-bar  Foo can something
     --foo-2    foo_2 can something else
  *  --foo-3    foo_3 can also something
@@ -77,6 +81,10 @@ is_help $script, <<'HERE', 'help, man, version';
 dummy synopsis...
 
 Usage:
+
+    help.t [options]
+
+Options:
     --foo-bar  Foo can something
     --foo-2    foo_2 can something else
  *  --foo-3    foo_3 can also something
@@ -100,6 +108,10 @@ is_help $script, <<'HERE', 'fatpacked code';
 How to run your script.
 
 Usage:
+
+    help.t [options]
+
+Options:
     --foo-bar  Foo can something
     --foo-2    foo_2 can something else
  *  --foo-3    foo_3 can also something
