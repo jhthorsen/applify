@@ -3,7 +3,7 @@ use utf8;
 use ExtUtils::MakeMaker;
 my %WriteMakefileArgs = (
   NAME           => 'Applify',
-  AUTHOR         => 'Jan Henning Thorsen <jhthorsen@cpan.org>',
+  AUTHOR         => 'Diab Jerius <djerius@cfa.harvard.edu>',
   LICENSE        => 'artistic_2',
   ABSTRACT_FROM  => 'lib/Applify.pm',
   VERSION_FROM   => 'lib/Applify.pm',
@@ -11,7 +11,7 @@ my %WriteMakefileArgs = (
   OBJECT         => '',
   BUILD_REQUIRES => {},
   TEST_REQUIRES  => {'Test::More' => '0.88'},
-  PREREQ_PM      => {'Cwd' => '0', 'File::Basename' => '0', 'Getopt::Long' => '0', 'perl' => '5.014004'},
+  PREREQ_PM      => {'Cwd'        => '0', 'File::Basename' => '0', 'Getopt::Long' => '0', 'perl' => '5.014004'},
   META_MERGE     => {
     'dynamic_config' => 0,
     'meta-spec'      => {version => 2},

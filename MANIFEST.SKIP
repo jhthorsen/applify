@@ -1,5 +1,5 @@
-#!start included /home/jhthorsen/.perlbrew/perls/perl-5.18.2/lib/5.18.2/ExtUtils/MANIFEST.SKIP
 # Avoid version control files.
+.pls_cache
 \bRCS\b
 \bCVS\b
 \bSCCS\b
