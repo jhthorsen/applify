@@ -5,11 +5,17 @@ use Test::More;
 my $app = eval <<'HERE' or die $@;
 use Applify;
 
+option str => test => 'test option', default => 42;
+
 my $i = 0;
 
 hook before_options_parsing => sub {
   $ENV{TEST_OPTIONS} = join ':', @{$_[1]};
   shift->option_parser->configure(qw(bundling no_pass_through)) if $i++;
+};
+
+hook after_options_parsing => sub {
+  $_[1]->{test} = 43;
 };
 
 hook before_exit => sub { die "before_exit:$_[1]" };
@@ -29,6 +35,7 @@ eval {
 } or do {
   like $@, qr{^before_exit:42}, 'before_exit';
   is $ENV{TEST_OPTIONS}, 'a:b:c', 'before_options_parsing argv';
+  is $app->test,         43,      'after_options_parsing argv';
   ok_option_parser_config([qw(no_auto_help no_auto_version bundling no_pass_through)], 'modified option_parser config');
 };
 

@@ -41,7 +41,10 @@ sub app {
   if (!$got_valid_options) {
     $self->_exit(1);
   }
-  elsif ($argv{help}) {
+
+  $self->_run_hook(after_options_parsing => \%argv);
+
+  if ($argv{help}) {
     $self->print_help;
     $self->_exit('help');
   }
@@ -688,6 +691,7 @@ classes can be L<Moose> based.
 
   hook before_exit            => sub { my ($script, $exit_value) = @_ };
   hook before_options_parsing => sub { my ($script, $argv) = @_ };
+  hook after_options_parsing  => sub { my ($script, $argv) = @_ };
 
 Defines a hook to run.
 
@@ -706,6 +710,30 @@ to modify L</option_parser>. Example:
 
   hook before_options_parsing => sub {
     shift->option_parser->configure(bundling no_pass_through);
+  };
+
+=item * after_options_parsing
+
+Called after command line options are parsed by L</option_parser>.  C<$argv>
+is a hash-ref of the options returned by L</option_parser>.  This hook allows you
+to modify the parsed options in C<$argv> before are passed on to your
+application. An error in parsing will still result in application exit.
+For example, to consolidate configuration file parsing across subcommands
+
+  use Config::Tiny;
+  hook after_options_parsing => sub {
+    my ( $script, $argv ) = @_;
+
+    if ( defined $argv->{config} ) {
+        my $config = Config::Tiny->read( $argv->{config} );
+        # read root section for global options
+        $argv->{$_} //= $config->{_}{$_} for keys %{$config->{_}};
+        # read subcommand section
+        if ( $script->{subcommand} && $config->{$script->{subcommand}} ) {
+           my $subcfg = $config->{$script->{subcommand}};
+           $argv->{$_} //= $subcfg->{$_} for keys %$subcfg;
+        }
+    }
   };
 
 =back
