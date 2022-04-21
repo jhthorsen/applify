@@ -70,12 +70,12 @@ $script = $app->_script;
 
 my $instance = app_instance($script, qw{-input-file /tmp/test});
 is $instance->has_input_file, 1, 'Moose style';
-is !$instance->has_iii, 1, 'does not exist';
+is !$instance->has_iii,       1, 'does not exist';
 ok !$instance->has_output_file, 'default does not exist yet';
 $instance->output_file;
 ok $instance->has_output_file, 'default applied';
-is $instance->has_template,    0, 'has_template not replaced see _sub()';
-is $instance->template,        'empty', 'default exists';
+is $instance->has_template, 0,       'has_template not replaced see _sub()';
+is $instance->template,     'empty', 'default exists';
 
 sub app_instance {
   my $script = shift;
